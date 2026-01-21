@@ -37,21 +37,14 @@
                     <button id="save-summary" class="btn-secondary"
                         style="padding: 4px 12px; font-size: 12px;">Save</button>
                 </div>
-                <textarea id="summary" placeholder="업로드된 소스에 대해 질문해보세요..." rows="10"></textarea>
-                <br />
-                <button class="btn-new-source" id="add-source">
-                    <span class="material-symbols-outlined">add</span>
-                    <span>소스 추가</span>
-                </button>
-                <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
+                <textarea id="summary"
+                    style="width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical;"
+                    placeholder="업로드된 소스에 대해 질문해보세요..." rows="10"></textarea>
+
             </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <ul class="source-list" id="source-list">
-                        <!-- Uploaded files will appear here -->
-                    </ul>
-                </div>
+
             </nav>
 
             <div class="sidebar-footer">
@@ -79,7 +72,7 @@
                         공유
                     </button>
                     <button class="btn-primary">
-                        노트북 가이드
+                        Data Sources
                     </button>
                 </div>
             </header>
@@ -119,23 +112,22 @@
         <!-- Right Panel (Notebook Guide) -->
         <aside class="right-panel hidden" id="guide-panel">
             <div class="panel-header">
-                <h2>노트북 가이드</h2>
+                <h2>Data Sources</h2>
                 <button class="btn-close" id="close-guide">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
             <div class="panel-content">
                 <div class="guide-section">
-                    <h3>요약</h3>
-                    <textarea id="summary-text" readonly
-                        style="width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical;"></textarea>
+                    <button class="btn-new-source" id="add-source">
+                        <span class="material-symbols-outlined">add</span>
+                        <span>소스 추가</span>
+                    </button>
+                    <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
                 </div>
-                <div class="guide-section">
-                    <h3>추천 질문</h3>
-                    <ul>
-                        <li>수익 구조는 어떻게 되나요?</li>
-                        <li>주요 경쟁사는 누구인가요?</li>
-                        <li>기술적 요구 사항을 알려줘.</li>
+                <div class="nav-section">
+                    <ul class="source-list" id="source-list">
+                        <!-- Uploaded files will appear here -->
                     </ul>
                 </div>
             </div>

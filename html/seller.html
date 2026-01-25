@@ -229,6 +229,11 @@
             padding-top: 16px;
             border-top: 1px dashed #e9ecef;
         }
+
+        .suggestion-chip:hover {
+            background-color: #eef2ff !important;
+            border-color: var(--primary-color) !important;
+        }
     </style>
 </head>
 
@@ -362,6 +367,8 @@
                     </div>
 
                     <div class="action-footer">
+                        <button type="button" id="delete-btn" class="btn-cancel"
+                            style="color: #fa5252; border-color: #fa5252; margin-right: auto;">Delete</button>
                         <button type="button" id="save-btn" class="btn-save">Update</button>
                     </div>
                 </form>

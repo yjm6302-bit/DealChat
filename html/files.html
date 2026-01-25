@@ -70,48 +70,52 @@
                         </div>
                         <!-- 파일 이름 -->
                         <div class="row mb-4 align-items-center">
-                            <label class="col-sm-2 col-form-label fw-bold"><a href="#" id="modal-location-icon"
-                                    target="_blank"><span class="material-symbols-outlined"
-                                        style="font-size: 18px;">download</span></a>파일
-                                이름</label>
+                            <label class="col-sm-2 col-form-label fw-bold">파일 이름
+                            </label>
                             <div class="col-sm-10">
-                                <input type="text" id="modal-file-name-input"
-                                    class="form-control bg-light border-0 px-3 py-2" readonly
-                                    style="font-family: monospace; cursor: not-allowed;">
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="text" id="modal-file-name-input"
+                                        class="form-control bg-light border-0 px-3 py-2" readonly
+                                        style="font-family: monospace; cursor: not-allowed; padding-right: 40px !important; width: 100%;">
+                                    <a href="#" id="modal-location-icon" target="_blank"
+                                        style="position: absolute; right: 12px; color: var(--text-secondary); height: 18px; line-height: 1;">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                         <!-- 요약 -->
                         <div class="row mb-4">
-                            <label
-                                class="col-sm-2 col-form-label fw-bold pt-2 d-flex align-items-center justify-content-between">
-                                <span>요약</span>
-                                <button type="button" id="AI-generate-summary"
-                                    class="btn btn-link p-0 text-primary d-flex align-items-center" title="AI 요약 생성"
-                                    style="text-decoration: none;">
-                                    <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
-                                </button>
-                            </label>
+                            <label class="col-sm-2 col-form-label fw-bold pt-2">요약</label>
                             <div class="col-sm-10">
-                                <textarea id="modal-summary"
-                                    class="form-control border-secondary-subtle px-3 py-2 shadow-sm"
-                                    rows="8"></textarea>
+                                <div style="position: relative;">
+                                    <textarea id="modal-summary"
+                                        class="form-control border-secondary-subtle px-3 py-2 shadow-sm" rows="8"
+                                        style="padding-right: 45px !important;"></textarea>
+                                    <button type="button" id="AI-generate-summary"
+                                        class="btn btn-link p-0 text-primary d-flex align-items-center" title="AI 요약 생성"
+                                        style="text-decoration: none; position: absolute; top: 10px; right: 12px; z-index: 5;">
+                                        <span class="material-symbols-outlined"
+                                            style="font-size: 20px;">auto_awesome</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <!-- 태그 -->
                         <div class="row mb-4 align-items-center">
-                            <label
-                                class="col-sm-2 col-form-label fw-bold d-flex align-items-center justify-content-between">
-                                <span>태그</span>
-                                <button type="button" id="AI-generate-tags"
-                                    class="btn btn-link p-0 text-primary d-flex align-items-center" title="AI 태그 생성"
-                                    style="text-decoration: none;">
-                                    <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
-                                </button>
-                            </label>
+                            <label class="col-sm-2 col-form-label fw-bold">태그</label>
                             <div class="col-sm-10">
-                                <input type="text" id="modal-tags"
-                                    class="form-control border-secondary-subtle px-3 py-2 shadow-sm"
-                                    placeholder="쉼표로 구분">
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="text" id="modal-tags"
+                                        class="form-control border-secondary-subtle px-3 py-2 shadow-sm"
+                                        placeholder="쉼표로 구분" style="padding-right: 40px !important; width: 100%;">
+                                    <button type="button" id="AI-generate-tags"
+                                        class="btn btn-link p-0 text-primary d-flex align-items-center" title="AI 태그 생성"
+                                        style="text-decoration: none; position: absolute; right: 12px; z-index: 5;">
+                                        <span class="material-symbols-outlined"
+                                            style="font-size: 20px;">auto_awesome</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <!-- 코멘츠 -->
@@ -153,6 +157,8 @@
                     </form>
                 </div>
                 <div class="modal-footer border-top-0 px-4 pb-4">
+                    <button type="button" id="delete-file-btn"
+                        class="btn btn-danger px-4 py-2 rounded-pill fw-semibold shadow me-2">삭제</button>
                     <button type="button" id="save-file-btn"
                         class="btn btn-primary px-5 py-2 rounded-pill fw-semibold shadow">저장</button>
                 </div>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sellers - DealChat</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <!-- AG Grid -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="logo" style="cursor: pointer;" onclick="location.href='./index.html'">
+                    <img src="../img/logo.png" style="height: 24px;">
+                </div>
+                <div class="search-container"
+                    style="display: flex; gap: 10px; flex: 1; max-width: 600px; margin: 0 40px;">
+                    <div class="input-wrapper"
+                        style="flex: 1; padding: 5px 15px; border-radius: 20px; box-shadow: none;">
+                        <input type="text" id="search-input" placeholder="매도자명 또는 ID 검색..."
+                            style="width: 100%; border: none; outline: none; background: transparent;">
+                    </div>
+                    <button id="search-btn" class="btn-primary" style="padding: 8px 20px;">검색</button>
+                </div>
+            </header>
+
+            <section class="grid-container" style="padding: 24px; flex: 1;">
+                <div id="sellerGrid" class="ag-theme-alpine" style="height: 100%; width: 100%;"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="../js/totalsellers.js" type="module"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css');
+        @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css');
+
+        .ag-theme-alpine {
+            --ag-border-color: var(--border-color);
+            --ag-header-background-color: #f1f3f4;
+            --ag-odd-row-background-color: #fafafa;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .ag-row {
+            cursor: pointer;
+        }
+    </style>
+</body>
+
+</html>

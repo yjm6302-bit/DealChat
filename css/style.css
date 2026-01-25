@@ -747,7 +747,8 @@ h3,
     animation: spin 1s linear infinite;
 }
 
-.modal-header {
+/* Custom Modal Styling (Scoping to avoid Bootstrap conflicts) */
+.modal-overlay .modal-header {
     padding: 20px 24px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -755,13 +756,13 @@ h3,
     align-items: center;
 }
 
-.modal-header h3 {
+.modal-overlay .modal-header h3 {
     margin: 0;
     font-size: 18px;
     color: var(--text-main);
 }
 
-.modal-body {
+.modal-overlay .modal-body {
     flex: 1;
     padding: 24px;
     display: flex;
@@ -785,7 +786,7 @@ h3,
     border-color: var(--primary-color);
 }
 
-.modal-footer {
+.modal-overlay .modal-footer {
     padding: 16px 24px;
     border-top: 1px solid var(--border-color);
     display: flex;

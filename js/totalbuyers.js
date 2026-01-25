@@ -16,7 +16,6 @@ $(document).ready(function () {
         location.href = './signin.html';
         return;
     }
-
     const columnDefs = [
         { field: "id", headerName: "ID", sortable: true, filter: true, width: 100, hide: true },
         { field: "companyName", headerName: "바이어", sortable: true, filter: true, flex: 1 },

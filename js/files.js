@@ -20,8 +20,6 @@ const columnDefs = [
 
 ];
 
-const userId = "67b320626fc0e9133183cb8b";
-
 let currentFile = null;
 
 const gridOptions = {
@@ -63,6 +61,14 @@ const gridOptions = {
 let gridApi;
 
 $(document).ready(function () {
+    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+    const userId = userData.id;
+
+    if (!userData || !userData.isLoggedIn) {
+        alert('로그인 후 이용해주세요.');
+        location.href = './signin.html';
+        return;
+    }
     const gridDiv = document.querySelector('#fileGrid');
     gridApi = agGrid.createGrid(gridDiv, gridOptions);
 
@@ -121,24 +127,22 @@ $(document).ready(function () {
         }
 
         const totalText = ragData + sourceText;
-        console.log('Generating AI summary for text length:', totalText.length);
         const $btn = $(this);
         const originalIcon = $btn.html();
-        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 20px;">sync</span>');
+
+        // 로딩 상태 표시
+        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span>');
 
         try {
             const prompt = "위 문서를 바탕으로 핵심 내용을 500자 이내의 한글 마크다운 형식으로 요약해줘. 다른 설명은 하지 마.";
+            const response = await addAiResponse(prompt, totalText);
+            const data = await response.json();
 
-            addAiResponse(prompt, totalText)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("AI 응답 성공:", data.answer);
-                    $('#modal-summary').val(data.answer);
-                })
-                .catch(error => {
-                    console.error("AI 요약 실패:", error);
-                    alert('요약 생성 중 오류가 발생했습니다: ' + error.message);
-                });
+            if (data.answer) {
+                $('#modal-summary').val(data.answer.trim());
+            } else {
+                throw new Error('응답 데이터가 없습니다.');
+            }
         } catch (error) {
             console.error('AI Summary Error:', error);
             alert('요약 생성 중 오류가 발생했습니다: ' + error.message);
@@ -159,22 +163,21 @@ $(document).ready(function () {
         const totalText = ragData + sourceText;
         const $btn = $(this);
         const originalIcon = $btn.html();
-        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 20px;">sync</span>');
+
+        // 로딩 상태 표시
+        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span>');
 
         try {
             const prompt = "위 문서와 가장 연관된 핵심 키워드 5개를 뽑아서 쉼표(,)로 구분된 문자열로만 답변해줘. 예: 태그1, 태그2, 태그3";
-            addAiResponse(prompt, totalText)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("AI 응답 성공:", data.answer);
-                    // "태그:" 같은 불필요한 접두사 제거 시도
-                    const cleanTags = data.answer.replace(/태그:\s*/i, '').trim();
-                    $('#modal-tags').val(cleanTags);
-                })
-                .catch(error => {
-                    console.error("AI 태그 생성 실패:", error);
-                    alert('태그 생성 중 오류가 발생했습니다: ' + error.message);
-                });
+            const response = await addAiResponse(prompt, totalText);
+            const data = await response.json();
+
+            if (data.answer) {
+                const cleanTags = data.answer.replace(/태그:\s*/i, '').trim();
+                $('#modal-tags').val(cleanTags);
+            } else {
+                throw new Error('응답 데이터가 없습니다.');
+            }
         } catch (error) {
             console.error('AI Tags Error:', error);
             alert('태그 생성 중 오류가 발생했습니다: ' + error.message);
@@ -193,7 +196,7 @@ $(document).ready(function () {
 
         const $btn = $(this);
         const originalIcon = $btn.html();
-        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 20px;">sync</span>');
+        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span>');
 
         try {
             const prompt = "위 문서를 바탕으로 핵심 내용을 500자 이내의 한글 마크다운 형식으로 요약해줘. 다른 설명은 하지 마.";
@@ -218,7 +221,7 @@ $(document).ready(function () {
 
         const $btn = $(this);
         const originalIcon = $btn.html();
-        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 20px;">sync</span>');
+        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span>');
 
         try {
             const prompt = "위 문서와 가장 연관된 핵심 키워드 5개를 뽑아서 쉼표(,)로 구분된 문자열로만 답변해줘. 예: 태그1, 태그2, 태그3";
@@ -364,6 +367,49 @@ $(document).ready(function () {
             console.error('Text extraction failed:', err);
             alert("텍스트 추출 중 오류가 발생했습니다.");
         }
+    });
+
+    // 삭제 버튼 이벤트
+    $('#delete-file-btn').on('click', function () {
+        if (!currentFile) return;
+
+        const fileName = currentFile.file_name || '이 파일';
+        if (!confirm(`정말로 "${fileName}"을(를) 삭제하시겠습니까?`)) {
+            return;
+        }
+
+        const $btn = $(this);
+        const originalText = $btn.text();
+        $btn.prop('disabled', true).text('삭제 중...');
+
+        APIcall({
+            id: currentFile.id,
+            table: 'files',
+            action: 'delete',
+            userId: userId
+        }, LAMBDA_URL, {
+            'Content-Type': 'application/json'
+        }, 'DELETE')
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    alert('삭제 중 오류가 발생했습니다: ' + result.error);
+                } else {
+                    alert('삭제되었습니다.');
+                    const modalEl = document.getElementById('file-modal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    // 그리드 새로고침
+                    gridApi.setGridOption('datasource', datasource);
+                }
+            })
+            .catch(error => {
+                console.error('Delete Error:', error);
+                alert('삭제 요청에 실패했습니다.');
+            })
+            .finally(() => {
+                $btn.prop('disabled', false).text(originalText);
+            });
     });
 
 });

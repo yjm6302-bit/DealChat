@@ -1,13 +1,53 @@
 import { APIcall } from './APIcallFunction.js';
 
 const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
-const userId = "67b320626fc0e9133183cb8b";
+const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
 
 $(document).ready(function () {
+    // 로그인 체크
+    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+    const userId = userData.id;
+
+    if (!userData || !userData.isLoggedIn) {
+        alert('로그인 후 이용해주세요.');
+        location.href = './signin.html';
+        return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const sellerId = urlParams.get('id');
     let selectedSharedFiles = [];
     let selectedShareTargets = [];
+    let searchResults = [];
+
+    let MOCK_FILES = [];
+
+    // 0. 가용 파일 목록(dealchat_files) 불러오기
+    function loadAvailableFiles() {
+        APIcall({
+            table: 'files',
+            userId: userId,
+            keyword: ''
+        }, LAMBDA_URL, {
+            'Content-Type': 'application/json'
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Lambda 결과 대응 (Items 배열 또는 직접 배열)
+                const files = Array.isArray(data) ? data : (data.Items || []);
+                MOCK_FILES = files.map(f => ({
+                    id: f.id,
+                    name: f.file_name, // API에서는 file_name으로 내려옴
+                    location: f.location
+                }));
+                console.log('Available files loaded:', MOCK_FILES.length);
+            })
+            .catch(error => {
+                console.error('Error loading available files:', error);
+            });
+    }
+
+    loadAvailableFiles();
 
     if (!sellerId) {
         alert('잘못된 접근입니다.');
@@ -56,7 +96,14 @@ $(document).ready(function () {
 
                 // 공유 파일 채우기
                 if (Array.isArray(data.share_files)) {
-                    selectedSharedFiles = data.share_files;
+                    // 받아온 데이터가 문자열 배열인 경우 객체 배열로 변환
+                    selectedSharedFiles = data.share_files.map(item => {
+                        if (typeof item === 'string') {
+                            const mock = MOCK_FILES.find(f => f.name === item);
+                            return mock ? { ...mock } : { id: 'ext-' + Math.random().toString(36).substr(2, 9), name: item };
+                        }
+                        return item;
+                    });
                     renderSharedFileChips();
                 }
             })
@@ -72,11 +119,42 @@ $(document).ready(function () {
     function renderSharedFileChips() {
         const $container = $('#shared-files-container');
         $container.empty();
-        selectedSharedFiles.forEach((fileName, index) => {
+
+        // 검색 결과 표시 (입력 중일 때)
+        if (searchResults.length > 0) {
+            searchResults.forEach((file) => {
+                const isSelected = selectedSharedFiles.some(f => f.name === file.name);
+                if (!isSelected) {
+                    const $chip = $(`
+                        <div class="chip suggestion-chip" data-id="${file.id}" style="border-style: dashed; background: #f8f9fa; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary-color);">add_circle</span>
+                            <span>${file.name}</span>
+                        </div>
+                    `);
+                    $chip.on('click', function () {
+                        selectedSharedFiles.push(file);
+                        $('#share-file-input').val('');
+                        searchResults = [];
+                        renderSharedFileChips();
+                    });
+                    $container.append($chip);
+                }
+            });
+
+            if (searchResults.some(file => !selectedSharedFiles.some(f => f.name === file.name))) {
+                $container.append('<div style="width: 100%; height: 1px; background: #eee; margin: 8px 0;"></div>');
+            }
+        }
+
+        // 선택된 파일 표시
+        selectedSharedFiles.forEach((file, index) => {
+            const fileUrl = file.location ? (file.location.startsWith('http') ? file.location : (S3_BASE_URL + file.location)) : '#';
             const $chip = $(`
-                <div class="chip">
-                    <span class="material-symbols-outlined" style="font-size: 16px;">attachment</span>
-                    <span>${fileName}</span>
+                <div class="chip" data-id="${file.id}">
+                    <a href="${fileUrl}" target="_blank" style="display: flex; align-items: center; color: inherit; text-decoration: none;">
+                        <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;">attachment</span>
+                    </a>
+                    <span>${file.name}</span>
                     <span class="remove-file" data-index="${index}">
                         <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;">close</span>
                     </span>
@@ -109,13 +187,49 @@ $(document).ready(function () {
     $('#share-file-input').on('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const fileName = $(this).val().trim();
-            if (fileName && !selectedSharedFiles.includes(fileName)) {
-                selectedSharedFiles.push(fileName);
-                renderSharedFileChips();
+            const query = $(this).val().trim();
+            const queryLower = query.toLowerCase();
+
+            if (query) {
+                // MOCK_FILES에서 키워드 포함하는 파일 모두 찾기
+                const matches = MOCK_FILES.filter(file =>
+                    file.name.toLowerCase().includes(queryLower)
+                );
+
+                if (matches.length > 0) {
+                    // 찾은 파일들을 목록에 추가 (중복 제외)
+                    matches.forEach(file => {
+                        if (!selectedSharedFiles.some(f => f.name === file.name)) {
+                            selectedSharedFiles.push(file);
+                        }
+                    });
+                } else {
+                    // 매칭되는 파일이 없을 경우 신규 객체 생성하여 추가
+                    if (!selectedSharedFiles.some(f => f.name === query)) {
+                        selectedSharedFiles.push({
+                            id: 'new-' + Date.now(),
+                            name: query
+                        });
+                    }
+                }
+
+                searchResults = [];
                 $(this).val('');
+                renderSharedFileChips();
             }
         }
+    });
+
+    $('#share-file-input').on('input', function () {
+        const query = $(this).val().trim().toLowerCase();
+        if (query.length > 0) {
+            searchResults = MOCK_FILES
+                .filter(file => file.name.toLowerCase().includes(query))
+                .slice(0, 5);
+        } else {
+            searchResults = [];
+        }
+        renderSharedFileChips();
     });
 
     $(document).on('click', '.remove-file', function () {
@@ -188,6 +302,45 @@ $(document).ready(function () {
             .catch(error => {
                 console.error('Save Error:', error);
                 alert('저장 요청에 실패했습니다.');
+            })
+            .finally(() => {
+                $btn.prop('disabled', false).text(originalText);
+            });
+    });
+
+    // 6. 삭제 처리
+    $('#delete-btn').on('click', function () {
+        const sellerId = $('#seller-id').val();
+        if (!sellerId) return;
+
+        if (!confirm('정말로 이 매물 정보를 삭제하시겠습니까?')) {
+            return;
+        }
+
+        const $btn = $(this);
+        const originalText = $btn.text();
+        $btn.prop('disabled', true).text('삭제 중...');
+
+        APIcall({
+            id: sellerId,
+            table: 'sellers',
+            action: 'delete',
+            userId: userId
+        }, LAMBDA_URL, {
+            'Content-Type': 'application/json'
+        }, 'DELETE')
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    alert('삭제 중 오류가 발생했습니다: ' + result.error);
+                } else {
+                    alert('성공적으로 삭제되었습니다.');
+                    location.href = './sellers.html';
+                }
+            })
+            .catch(error => {
+                console.error('Delete Error:', error);
+                alert('삭제 요청에 실패했습니다.');
             })
             .finally(() => {
                 $btn.prop('disabled', false).text(originalText);

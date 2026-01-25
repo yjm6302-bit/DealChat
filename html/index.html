@@ -24,13 +24,13 @@
                 </div>
                 <div class="user-profile">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User Avatar" class="avatar">
-                    <span class="user-name">홍길동</span>
+                    <span class="user-name" id="userName">홍길동</span>
                 </div>
             </header>
 
             <section class="dashboard-content">
                 <div class="welcome-header">
-                    <h1>반갑습니다, 홍길동님</h1>
+                    <h1>반갑습니다, <span id="userName2">홍길동</span>님</h1>
                     <p>탐색할 카테고리를 선택해주세요.</p>
                 </div>
 
@@ -39,25 +39,25 @@
                         <div class="card-icon-wrapper company">
                             <span class="material-symbols-outlined">business</span>
                         </div>
-                        <h3>Company</h3>
+                        <h3>My Companies</h3>
                         <p>기업 정보 및 데이터베이스 관리</p>
                         <div class="card-arrow">
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </div>
                     </div>
 
-                    <div class="menu-card" onclick="location.href='./files.html'">
-                        <div class="card-icon-wrapper file">
-                            <span class="material-symbols-outlined">description</span>
+                    <div class="menu-card" onclick="location.href='./sellers.html'">
+                        <div class="card-icon-wrapper my-seller">
+                            <span class="material-symbols-outlined">files</span>
                         </div>
-                        <h3>File</h3>
-                        <p>문서 및 리소스 아카이브</p>
+                        <h3>My Sellers</h3>
+                        <p>내 매도자 정보 관리</p>
                         <div class="card-arrow">
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </div>
                     </div>
 
-                    <div class="menu-card" onclick="location.href='./sellers.html'">
+                    <div class="menu-card" onclick="location.href='./totalsellers.html'">
                         <div class="card-icon-wrapper seller">
                             <span class="material-symbols-outlined">sell</span>
                         </div>
@@ -68,7 +68,29 @@
                         </div>
                     </div>
 
+                    <div class="menu-card" onclick="location.href='./files.html'">
+                        <div class="card-icon-wrapper file">
+                            <span class="material-symbols-outlined">description</span>
+                        </div>
+                        <h3>My Files</h3>
+                        <p>문서 및 리소스 아카이브</p>
+                        <div class="card-arrow">
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </div>
+                    </div>
+
                     <div class="menu-card" onclick="location.href='./buyers.html'">
+                        <div class="card-icon-wrapper my-buyer">
+                            <span class="material-symbols-outlined">shopping_cart</span>
+                        </div>
+                        <h3>My Buyers</h3>
+                        <p>내 매수자 정보 관리</p>
+                        <div class="card-arrow">
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </div>
+                    </div>
+
+                    <div class="menu-card" onclick="location.href='./totalbuyers.html'">
                         <div class="card-icon-wrapper buyer">
                             <span class="material-symbols-outlined">shopping_cart</span>
                         </div>
@@ -82,6 +104,8 @@
             </section>
         </main>
     </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="../js/index2.js"></script>
 
     <style>
         .dashboard-bg {
@@ -121,10 +145,10 @@
 
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             animation: fadeInUp 0.8s ease-out 0.2s both;
         }
 
@@ -136,8 +160,8 @@
 
         .menu-card {
             background: white;
-            border-radius: 24px;
-            padding: 32px;
+            border-radius: 16px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -156,13 +180,13 @@
         }
 
         .card-icon-wrapper {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             transition: transform 0.3s ease;
         }
 
@@ -171,7 +195,7 @@
         }
 
         .card-icon-wrapper .material-symbols-outlined {
-            font-size: 32px;
+            font-size: 24px;
             color: white;
         }
 
@@ -191,23 +215,31 @@
             background: linear-gradient(135deg, #ea4335, #c52216);
         }
 
+        .card-icon-wrapper.my-seller {
+            background: linear-gradient(135deg, #2024f9, #2f1df3);
+        }
+
+        .card-icon-wrapper.my-buyer {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
         .menu-card h3 {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 600;
             color: var(--text-main);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .menu-card p {
-            font-size: 15px;
+            font-size: 13px;
             color: var(--text-secondary);
-            line-height: 1.5;
+            line-height: 1.4;
         }
 
         .card-arrow {
             position: absolute;
-            right: 32px;
-            bottom: 32px;
+            right: 20px;
+            bottom: 20px;
             color: var(--border-color);
             transition: all 0.3s ease;
         }

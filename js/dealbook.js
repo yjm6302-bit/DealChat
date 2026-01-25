@@ -3,6 +3,16 @@ import { APIcall } from './APIcallFunction.js';
 import { filetypecheck, fileUpload } from './File_Functions.js';
 
 $(document).ready(function () {
+    // 로그인 체크
+    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+    const userId = userData.id;
+
+    if (!userData || !userData.isLoggedIn) {
+        alert('로그인 후 이용해주세요.');
+        location.href = './signin.html';
+        return;
+    }
+
     const $chatInput = $('#chat-input');
     const $chatMessages = $('#chat-messages');
     const $welcomeScreen = $('.welcome-screen');
@@ -11,7 +21,6 @@ $(document).ready(function () {
     // URL에서 id 파라미터 추출
     const urlParams = new URLSearchParams(window.location.search);
     const companyId = urlParams.get('id');
-    const userId = "67b320626fc0e9133183cb8b";
     //const userId = urlParams.get('userId');
 
     // 현재 불러온 회사 데이터를 저장할 변수
@@ -20,10 +29,36 @@ $(document).ready(function () {
     const READ_WEBHOOK_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-read';
     const DELETE_WEBHOOK_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-delete';
     const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
-    const AI_LAMBDA_URL = 'https://iocc4lp5btcyfcrgmyux4s3mea0lnbko.lambda-url.ap-northeast-2.on.aws/';
 
-    // 파싱된 소스 텍스트를 저장할 객체
-    let sourceTexts = {};
+    // 공유 파일 검색 및 제안용 데이터
+    let availableFiles = [];
+    let searchResults = [];
+
+    // 0. 가용 파일 목록(dealchat_files) 불러오기
+    function loadAvailableFiles() {
+        APIcall({
+            table: 'files',
+            userId: userId,
+            keyword: ''
+        }, LAMBDA_URL, {
+            'Content-Type': 'application/json'
+        })
+            .then(response => response.json())
+            .then(data => {
+                const files = Array.isArray(data) ? data : (data.Items || []);
+                availableFiles = files.map(f => ({
+                    id: f.id,
+                    name: f.file_name,
+                    location: f.location
+                }));
+                console.log('Available files for registration loaded:', availableFiles.length);
+            })
+            .catch(error => {
+                console.error('Error loading available files:', error);
+            });
+    }
+
+    loadAvailableFiles();
 
     // 회사 ID가 있으면 데이터 가져오기
     if (companyId) {
@@ -101,11 +136,13 @@ $(document).ready(function () {
         }
 
         const updatedSummary = $('#modal-summary-text').val();
-        const updatedIndustry = $('#industry').val();
+        const updatedIndustry = $('#modal-industry-text').val();
+        const updatedCompanyName = $('#modal-company-name-text').val();
 
         // 기존 데이터에 수정된 요약본 및 산업 반영
         const payload2 = {
             ...currentCompanyData,
+            companyName: updatedCompanyName,
             summary: updatedSummary,
             industry: updatedIndustry,
             table: 'companies',
@@ -127,9 +164,12 @@ $(document).ready(function () {
                     alert('저장 중 오류가 발생했습니다: ' + result.error);
                 } else {
                     // 로컬 데이터 및 UI 업데이트
+                    currentCompanyData.companyName = updatedCompanyName;
                     currentCompanyData.summary = updatedSummary;
                     currentCompanyData.industry = updatedIndustry;
                     $('#summary').val(updatedSummary);
+                    $('#industry').val(updatedIndustry);
+                    $('.notebook-title').text(updatedCompanyName);
                     $summaryModal.hide();
                 }
             })
@@ -255,13 +295,18 @@ $(document).ready(function () {
         sendMessage();
     });
 
-    // Summary Expand Modal Logic
     const $summaryModal = $('#summary-modal');
     const $summaryText = $('#summary');
+    const $industryText = $('#industry');
+    const $notebookTitleText = $('.notebook-title');
     const $modalSummaryText = $('#modal-summary-text');
+    const $modalIndustryText = $('#modal-industry-text');
+    const $modalCompanyNameText = $('#modal-company-name-text');
 
     $('#expand-summary').on('click', function () {
         $modalSummaryText.val($summaryText.val());
+        $modalIndustryText.val($industryText.val());
+        $modalCompanyNameText.val($notebookTitleText.text());
         $summaryModal.css('display', 'flex');
     });
 
@@ -269,40 +314,17 @@ $(document).ready(function () {
         $summaryModal.hide();
     });
 
-    // AI Generate Logic (in Modal)
-    $('#ai-generate').on('click', function () {
-        const $btn = $(this);
-        const originalText = $btn.html();
-        const contentsToSummarize = $modalSummaryText.val() || "요약할 내용이 없습니다.";
 
-        $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 18px;">sync</span> 생성 중...');
-
-        APIcall({ contents: contentsToSummarize }, AI_LAMBDA_URL, {
-            'Content-Type': 'application/json'
-        })
-            .then(response => response.json())
-            .then(data => {
-                $modalSummaryText.val(data.answer.trim());
-            })
-            .catch(error => {
-                console.error('AI Summary Error:', error);
-                alert('요약 생성 중 오류가 발생했습니다.');
-            })
-            .finally(() => {
-                $btn.prop('disabled', false).html(originalText);
-            });
-    });
-
-    // Industry Auto Generate Logic
+    // Industry Auto Generate Logic (in Modal)
     $('#generate-industry').on('click', async function () {
         const $btn = $(this);
         const originalText = $btn.html();
-        const context = $('#summary').val();
+        const context = $('#modal-summary-text').val(); // 모달 내 요약 텍스트 사용
         const ragData = getRAGdata();
-        const fcontext = context + "\n\n" + ragData;
+        const fcontext = (context || "") + "\n\n" + (ragData || "");
 
-        if (!fcontext) {
-            alert('회사소개 내용을 먼저 입력해주세요.');
+        if (!fcontext.trim()) {
+            alert('회사소개 내용이나 업로드된 파일이 없습니다.');
             return;
         }
 
@@ -310,10 +332,10 @@ $(document).ready(function () {
         $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span>');
 
         try {
-            const industryPrompt = "이 회사가 속한 산업 분야를 1~2단어로만 답변해줘. 다른 설명은 하지 마.";
+            const industryPrompt = "이 회사가 속한 산업 분야를 짧은 단어로만 답변해줘. 다른 설명은 하지마.";
             const response = await addAiResponse(industryPrompt, fcontext);
             const data = await response.json();
-            $('#industry').val(data.answer.trim());
+            $('#modal-industry-text').val(data.answer.trim()); // 모달 내 산업 필드 업데이트
         } catch (error) {
             console.error('Industry generation failed:', error);
             alert('산업 정보 생성 중 오류가 발생했습니다.');
@@ -467,7 +489,8 @@ $(document).ready(function () {
             $('input[name="industry"]').val($('#industry').val() || '');
             $('input[name="registrant"]').val($('#userId').val() || '');
         }
-        updateFileDatalist(); // 모달 열 때 파일 리스트 업데이트
+        // updateFileDatalist(); // 기존 방식 제거
+        loadAvailableFiles(); // 모달 열 때 최신화
         $registerModal.css('display', 'flex');
     });
 
@@ -488,39 +511,92 @@ $(document).ready(function () {
     let selectedShareTargets = [];
     let selectedSharedFiles = [];
 
-    // 현재 업로드된 소스 리스트로 datalist 업데이트
-    function updateFileDatalist() {
-        const $datalist = $('#available-sources');
-        $datalist.empty();
-        $('#source-list .source-name').each(function () {
-            const fileName = $(this).text().trim();
-            if (fileName) {
-                $datalist.append(`<option value="${fileName}">`);
-            }
-        });
-    }
-
     // 파일 공유 입력창 이벤트
     $('#share-file-input').on('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const fileName = $(this).val().trim();
-            if (fileName && !selectedSharedFiles.includes(fileName)) {
-                selectedSharedFiles.push(fileName);
-                renderSharedFileTags();
+            const query = $(this).val().trim();
+            const queryLower = query.toLowerCase();
+
+            if (query) {
+                // availableFiles에서 키워드 포함하는 파일 모두 찾기
+                const matches = availableFiles.filter(file =>
+                    file.name.toLowerCase().includes(queryLower)
+                );
+
+                if (matches.length > 0) {
+                    matches.forEach(file => {
+                        if (!selectedSharedFiles.some(f => f.name === file.name)) {
+                            selectedSharedFiles.push(file);
+                        }
+                    });
+                } else {
+                    if (!selectedSharedFiles.some(f => f.name === query)) {
+                        selectedSharedFiles.push({
+                            id: 'new-' + Date.now(),
+                            name: query
+                        });
+                    }
+                }
+
+                searchResults = [];
                 $(this).val('');
+                renderSharedFileChips();
             }
         }
     });
 
-    function renderSharedFileTags() {
+    $('#share-file-input').on('input', function () {
+        const query = $(this).val().trim().toLowerCase();
+        if (query.length > 0) {
+            searchResults = availableFiles
+                .filter(file => file.name.toLowerCase().includes(query))
+                .slice(0, 5);
+        } else {
+            searchResults = [];
+        }
+        renderSharedFileChips();
+    });
+
+    function renderSharedFileChips() {
         const $container = $('#shared-files-container');
         $container.empty();
-        selectedSharedFiles.forEach((name, index) => {
+
+        // 검색 결과 표시
+        if (searchResults.length > 0) {
+            searchResults.forEach((file) => {
+                const isSelected = selectedSharedFiles.some(f => f.name === file.name);
+                if (!isSelected) {
+                    const $chip = $(`
+                        <div class="share-tag suggestion-chip" data-id="${file.id}" style="border-style: dashed; background: #f8f9fa; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary-color);">add_circle</span>
+                            <span>${file.name}</span>
+                        </div>
+                    `);
+                    $chip.on('click', function () {
+                        selectedSharedFiles.push(file);
+                        $('#share-file-input').val('');
+                        searchResults = [];
+                        renderSharedFileChips();
+                    });
+                    $container.append($chip);
+                }
+            });
+
+            if (searchResults.some(file => !selectedSharedFiles.some(f => f.name === file.name))) {
+                $container.append('<div style="width: 100%; height: 1px; background: #eee; margin: 8px 0; flex-basis: 100%;"></div>');
+            }
+        }
+
+        // 선택된 파일 표시
+        selectedSharedFiles.forEach((file, index) => {
+            const fileUrl = file.location ? (file.location.startsWith('http') ? file.location : (S3_BASE_URL + file.location)) : '#';
             const $tag = $(`
-                <div class="share-tag">
-                    <span class="material-symbols-outlined" style="font-size: 16px;">attachment</span>
-                    <span>${name}</span>
+                <div class="share-tag" data-id="${file.id}">
+                    <a href="${fileUrl}" target="_blank" style="display: flex; align-items: center; color: inherit; text-decoration: none;">
+                        <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;">attachment</span>
+                    </a>
+                    <span>${file.name}</span>
                     <span class="material-symbols-outlined remove-file-tag" data-index="${index}" style="cursor: pointer; font-size: 16px;">close</span>
                 </div>
             `);
@@ -531,7 +607,7 @@ $(document).ready(function () {
     $(document).on('click', '.remove-file-tag', function () {
         const index = $(this).data('index');
         selectedSharedFiles.splice(index, 1);
-        renderSharedFileTags();
+        renderSharedFileChips();
     });
 
     $('#share-with-input').on('keydown', function (e) {
@@ -609,7 +685,7 @@ $(document).ready(function () {
                     selectedShareTargets = [];
                     selectedSharedFiles = [];
                     renderShareTags();
-                    renderSharedFileTags();
+                    renderSharedFileChips();
                     $('#share-target-wrapper').hide();
                 }
             })
@@ -636,38 +712,6 @@ $(document).ready(function () {
         $fileUpload.click();
     });
 
-    // PDF.js worker setup
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-    // File Parsing Functions
-    async function parseFile(file) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        let text = "";
-
-        if (ext === 'txt') {
-            text = await file.text();
-        } else if (ext === 'pdf') {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                fullText += content.items.map(item => item.str).join(' ') + "\n";
-            }
-            text = fullText;
-        } else if (ext === 'docx' || ext === 'doc') {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-            text = result.value;
-        } else {
-            throw new Error('지원하지 않는 파일 형식입니다.');
-        }
-        return text;
-    }
-
-    // n8n Webhook URL (이미지에 제시된 주소)
-    const WEBHOOK_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-upload';
 
     $fileUpload.on('change', async function (e) {
         if (!companyId) {

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko-KR" class="layout-navbar-fixed layout-wide" dir="ltr" data-skin="default" data-assets-path="../assets/"
+    data-template="front-pages" data-bs-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>로그인 - 딜챗(DealChat)</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://dealchat.co.kr/assets/img/favicon.png">
+
+    <!-- Fonts -->
+    <link rel="stylesheet" as="style" crossorigin="" href="../css/pretendard.min.css">
+    <style>
+        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+    </style>
+
+    <link rel="stylesheet" href="../css/iconify-icons.css">
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="../css/core.css">
+    <link rel="stylesheet" href="../css/demo.css">
+    <link rel="stylesheet" href="../css/front-page.css">
+
+    <style>
+        body {
+            background-color: #f5f5f9;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header img {
+            height: 24px;
+            margin-bottom: 20px;
+        }
+
+        .login-header h2 {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #323232;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #8e8e8e;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #a1a1a1;
+            line-height: 1.5;
+        }
+
+        .footer-text a {
+            color: #696cff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card shadow-lg">
+        <div class="login-header">
+            <a href="../main.html">
+                <img src="../img/logo.png" alt="DealChat Logo">
+            </a>
+            <h2>DealChat 로그인</h2>
+            <p>스타트업 M&A의 새로운 기준</p>
+        </div>
+
+        <div class="google-btn-container">
+            <div id="googleSignIn"></div>
+        </div>
+
+        <div class="footer-text">
+            © 2026 DealChat. All rights reserved. <br>
+            <a href="#">이용약관</a> | <a href="#">개인정보 처리방침</a>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="../js/jquery.js"></script>
+    <script src="../js/popper.js"></script>
+    <script src="../js/bootstrap.js"></script>
+    <script src="../js/front-main.js"></script>
+
+    <!-- Google Login Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module" src="../js/signin.js"></script>
+</body>
+
+</html>

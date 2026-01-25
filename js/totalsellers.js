@@ -35,7 +35,6 @@ const gridOptions = {
 let gridApi;
 
 $(document).ready(function () {
-    // 로그인 체크
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
     const userId = userData.id;
 

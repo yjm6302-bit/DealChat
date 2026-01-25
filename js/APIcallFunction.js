@@ -1,4 +1,4 @@
-export function APIcall(prompts, Furl, Fheaders) {
+export function APIcall(prompts, Furl, Fheaders, Fmethod = 'POST') {
     // Truncate logging to prevent console lag with large payloads
     const logData = typeof prompts === 'string' ?
         (prompts.length > 500 ? prompts.substring(0, 500) + '...' : prompts) :
@@ -21,7 +21,7 @@ export function APIcall(prompts, Furl, Fheaders) {
     }
 
     return fetch(Furl, {
-        method: 'POST',
+        method: Fmethod,
         headers: Fheaders || {},
         body: body,
         mode: 'cors',

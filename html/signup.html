@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인 - DealChat</title>
+    <title>회원가입 - DealChat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -97,7 +97,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 60px 20px;
+            padding: 60px 20px 80px;
         }
 
         .page-title {
@@ -107,7 +107,7 @@
             margin-bottom: 50px;
         }
 
-        .login-box {
+        .signup-box {
             background: white;
             width: 100%;
             max-width: 520px;
@@ -129,6 +129,11 @@
             margin-bottom: 10px;
         }
 
+        .form-group label .required {
+            color: #9d7cff;
+            margin-left: 4px;
+        }
+
         .form-group input {
             width: 100%;
             padding: 14px 16px;
@@ -147,7 +152,13 @@
             border-color: #9d7cff;
         }
 
-        .btn-login {
+        .password-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        .btn-signup {
             width: 100%;
             background: linear-gradient(135deg, #9d7cff, #8b5cf6);
             color: white;
@@ -161,27 +172,14 @@
             transition: transform 0.2s;
         }
 
-        .btn-login:hover {
+        .btn-signup:hover {
             transform: translateY(-1px);
         }
 
-        .forgot-password {
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 35px;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .forgot-password a {
-            color: #9d7cff;
-            text-decoration: none;
-            font-weight: 500;
-            margin-left: 8px;
-        }
-
-        .forgot-password a:hover {
-            text-decoration: underline;
+        .btn-signup:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .divider {
@@ -190,18 +188,18 @@
             margin: 35px 0;
         }
 
-        .signup-section {
+        .login-section {
             text-align: center;
         }
 
-        .signup-section p {
+        .login-section p {
             font-size: 16px;
             font-weight: 700;
             color: #333;
             margin-bottom: 24px;
         }
 
-        .btn-signup {
+        .btn-login-link {
             width: 100%;
             background: white;
             color: #9d7cff;
@@ -214,8 +212,45 @@
             transition: all 0.2s;
         }
 
-        .btn-signup:hover {
+        .btn-login-link:hover {
             background: rgba(157, 124, 255, 0.05);
+        }
+
+        .terms-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            margin-top: 2px;
+            cursor: pointer;
+            accent-color: #9d7cff;
+        }
+
+        .checkbox-group label {
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+            line-height: 1.5;
+        }
+
+        .checkbox-group label a {
+            color: #9d7cff;
+            text-decoration: none;
+        }
+
+        .checkbox-group label a:hover {
+            text-decoration: underline;
         }
 
         @media (max-width: 768px) {
@@ -223,7 +258,7 @@
                 display: none;
             }
 
-            .login-box {
+            .signup-box {
                 padding: 40px 30px;
             }
         }
@@ -241,46 +276,76 @@
                 <a href="#">상담문의</a>
             </nav>
         </div>
-        <button class="btn-header-login">
+        <button class="btn-header-login" onclick="location.href='signin.html'">
             <span class="material-symbols-outlined" style="font-size: 18px;">login</span>
             로그인
         </button>
     </header>
 
     <main class="main-content">
-        <h1 class="page-title">로그인</h1>
+        <h1 class="page-title">회원가입</h1>
 
-        <div class="login-box">
-            <form id="signin-form">
+        <div class="signup-box">
+            <form id="signup-form">
                 <div class="form-group">
-                    <label>아이디(이메일주소)</label>
+                    <label>이메일 주소<span class="required">*</span></label>
                     <input type="email" id="user-email" placeholder="이메일을 입력하세요." required>
                 </div>
 
                 <div class="form-group">
-                    <label>비밀번호</label>
+                    <label>비밀번호<span class="required">*</span></label>
                     <input type="password" id="user-password" placeholder="비밀번호를 입력하세요." required>
+                    <div class="password-hint">8자 이상, 영문/숫자/특수문자 조합</div>
                 </div>
 
-                <button type="submit" class="btn-login">로그인</button>
-
-                <div class="forgot-password">
-                    비밀번호를 잊으셨나요?
-                    <a href="#">비밀번호 찾기</a>
+                <div class="form-group">
+                    <label>비밀번호 확인<span class="required">*</span></label>
+                    <input type="password" id="user-password-confirm" placeholder="비밀번호를 다시 입력하세요." required>
                 </div>
+
+                <div class="form-group">
+                    <label>이름<span class="required">*</span></label>
+                    <input type="text" id="user-name" placeholder="이름을 입력하세요." required>
+                </div>
+
+                <div class="form-group">
+                    <label>회사명</label>
+                    <input type="text" id="user-company" placeholder="회사명을 입력하세요. (선택)">
+                </div>
+
+                <div class="terms-section">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="agree-all">
+                        <label for="agree-all">전체 동의</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="agree-terms" class="agree-item" required>
+                        <label for="agree-terms"><a href="#" target="_blank">이용약관</a>에 동의합니다. (필수)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="agree-privacy" class="agree-item" required>
+                        <label for="agree-privacy"><a href="#" target="_blank">개인정보 처리방침</a>에 동의합니다. (필수)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="agree-marketing" class="agree-item">
+                        <label for="agree-marketing">마케팅 정보 수신에 동의합니다. (선택)</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-signup">회원가입</button>
 
                 <div class="divider"></div>
 
-                <div class="signup-section">
-                    <p>아직 회원이 아니세요?</p>
-                    <button type="button" class="btn-signup" onclick="location.href='signup.html'">회원가입</button>
+                <div class="login-section">
+                    <p>이미 계정이 있으신가요?</p>
+                    <button type="button" class="btn-login-link" onclick="location.href='signin.html'">로그인</button>
                 </div>
             </form>
         </div>
     </main>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="../js/signin.js" type="module"></script>
+    <script src="../js/signup.js" type="module"></script>
 </body>
 
 </html>

@@ -50,13 +50,6 @@
                 <br /><br />
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <p style="margin: 0; font-weight: 600;">산업</p>
-                    <div style="display: flex; gap: 4px;">
-                        <button id="generate-industry" class="btn-secondary"
-                            style="padding: 4px 8px; font-size: 12px; display: flex; align-items: center; gap: 4px; min-width: fit-content;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">auto_awesome</span>
-                            <span>자동 생성</span>
-                        </button>
-                    </div>
                 </div>
                 <input type="text" id="industry"
                     style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none;"
@@ -94,7 +87,7 @@
                     <div class="breadcrumb">
                         <span class="folder">My DealChat</span>
                         <span class="separator">/</span>
-                        <span class="notebook-title" contenteditable="true">와이앤아처</span>
+                        <span class="notebook-title" contenteditable="false">와이앤아처</span>
                     </div>
                 </div>
                 <div class="top-actions">
@@ -174,19 +167,41 @@
         <div class="modal-content-large">
             <div class="modal-header">
                 <h3>회사소개</h3>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button id="generate-summary" class="btn-secondary"
-                        style="padding: 6px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">auto_awesome</span>
-                        AI생성
-                    </button>
-                    <button class="btn-close" id="close-summary-modal">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
-                </div>
+                <button class="btn-close" id="close-summary-modal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </div>
-            <div class="modal-body">
-                <textarea id="modal-summary-text" placeholder="회사소개 내용을 입력하세요..."></textarea>
+            <div class="modal-body" style="flex-direction: column; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: 600; min-width: 60px;">회사명</label>
+                    <input type="text" id="modal-company-name-text"
+                        style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none;"
+                        placeholder="회사명을 입력하세요...">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: 600; min-width: 60px;">산업</label>
+                    <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                        <input type="text" id="modal-industry-text"
+                            style="width: 100%; padding: 10px 40px 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none;"
+                            placeholder="산업 분야를 입력하세요...">
+                        <button id="generate-industry"
+                            style="position: absolute; right: 10px; background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; position: relative;">
+                    <label style="font-weight: 600;">회사소개</label>
+                    <div style="flex: 1; position: relative;">
+                        <textarea id="modal-summary-text"
+                            style="width: 100%; height: 100%; padding: 10px 40px 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; resize: none; min-height: 250px;"
+                            placeholder="회사소개 내용을 입력하세요..."></textarea>
+                        <button id="generate-summary"
+                            style="position: absolute; top: 10px; right: 10px; background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button id="save-summary" class="btn-primary">저장</button>
@@ -388,6 +403,11 @@
             color: #ff4d4f;
         }
 
+        .suggestion-chip:hover {
+            background-color: #eef2ff !important;
+            border-color: var(--primary-color) !important;
+        }
+
         /* Input with unit */
         .input-with-unit {
             flex: 1;
@@ -466,10 +486,7 @@
                         <label>공유 파일</label>
                         <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
                             <input type="text" id="share-file-input" placeholder="파일명을 입력하고 Enter를 누르세요"
-                                list="available-sources" style="width: 100%;">
-                            <datalist id="available-sources">
-                                <!-- Options will be injected via JS -->
-                            </datalist>
+                                style="width: 100%;">
                             <div id="shared-files-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
                                 <!-- File chips will be injected here -->
                             </div>

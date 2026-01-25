@@ -13,6 +13,8 @@
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- AG Grid -->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 </head>
@@ -33,7 +35,9 @@
                             style="width: 100%; border: none; outline: none; background: transparent;">
                     </div>
                     <button id="search-btn" class="btn-primary" style="padding: 8px 20px;">검색</button>
-                    <button id="new-btn" class="btn-secondary" style="padding: 8px 20px;">New</button>
+                    <button id="delete-btn" class="btn btn-danger"
+                        style="padding: 8px 20px; border-radius: 20px;">삭제</button>
+                    <button id="new-btn" class="btn-secondary" style="padding: 8px 20px;">NEW</button>
                 </div>
             </header>
 
@@ -43,7 +47,51 @@
         </main>
     </div>
 
+    <!-- New Company Modal -->
+    <div class="modal fade" id="new-company-modal" tabindex="-1" aria-labelledby="newCompanyModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pt-4 px-4 bg-light" style="border-radius: 20px 20px 0 0;">
+                    <h5 class="modal-title fw-bold" id="newCompanyModalLabel">기업 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="new-company-form" class="w-100 container-fluid">
+                        <div class="row mt-2">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-bold text-secondary">기업명</label>
+                                <input type="text" id="new-company-name"
+                                    class="form-control px-3 py-2 border-1 shadow-sm" placeholder="기업 이름을 입력하세요"
+                                    required>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-bold text-secondary">산업</label>
+                                <input type="text" id="new-company-industry"
+                                    class="form-control px-3 py-2 border-1 shadow-sm" placeholder="산업 분야 (예: IT, 금융)">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-2">
+                                <label class="form-label fw-bold text-secondary">회사소개</label>
+                                <textarea id="new-company-summary" class="form-control px-3 py-2 border-1 shadow-sm"
+                                    rows="12" placeholder="회사에 대한 간단한 설명을 입력하세요"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 py-2 rounded-pill fw-bold me-2"
+                        data-bs-dismiss="modal">취소</button>
+                    <button type="button" id="save-new-company"
+                        class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm">등록</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../js/companies.js" type="module"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css');

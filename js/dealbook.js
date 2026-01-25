@@ -1,45 +1,47 @@
 import { addAiResponse, getRAGdata } from './AI_Functions.js';
 import { APIcall } from './APIcallFunction.js';
-import { filetypecheck, fileUpload } from './File_Functions.js';
+import { filetypecheck, fileUpload, extractTextFromPDF, extractTextFromDocx, extractTextFromPptx, extractTextFromTxt } from './File_Functions.js';
+
+const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
 
 $(document).ready(function () {
-    // 로그인 체크
+    let currentCompanyData = null;
+    let availableFiles = [];
+    let searchResults = [];
+
+    // URL에서 id 파라미터 추출
+    const urlParams = new URLSearchParams(window.location.search);
+    const companyId = urlParams.get('id');
+
+    if (!companyId) {
+        alert('회사 ID가 없습니다.');
+        location.href = './index.html';
+        return;
+    }
+
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    const userId = userData.id;
 
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
         location.href = './signin.html';
         return;
     }
+    const userId = userData.id;
+    $('#userName').text(userData.name);
 
     const $chatInput = $('#chat-input');
     const $chatMessages = $('#chat-messages');
     const $welcomeScreen = $('.welcome-screen');
     const $guidePanel = $('#guide-panel');
 
-    // URL에서 id 파라미터 추출
-    const urlParams = new URLSearchParams(window.location.search);
-    const companyId = urlParams.get('id');
-    //const userId = urlParams.get('userId');
 
-    // 현재 불러온 회사 데이터를 저장할 변수
-    let currentCompanyData = null;
-    const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
-    const READ_WEBHOOK_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-read';
-    const DELETE_WEBHOOK_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-delete';
-    const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
-
-    // 공유 파일 검색 및 제안용 데이터
-    let availableFiles = [];
-    let searchResults = [];
 
     // 0. 가용 파일 목록(dealchat_files) 불러오기
     function loadAvailableFiles() {
         APIcall({
             table: 'files',
-            userId: userId,
-            keyword: ''
+            userId: userId
         }, LAMBDA_URL, {
             'Content-Type': 'application/json'
         })
@@ -49,6 +51,7 @@ $(document).ready(function () {
                 availableFiles = files.map(f => ({
                     id: f.id,
                     name: f.file_name,
+                    userId: f.userId,
                     location: f.location
                 }));
                 console.log('Available files for registration loaded:', availableFiles.length);
@@ -59,74 +62,46 @@ $(document).ready(function () {
     }
 
     loadAvailableFiles();
+    console.log('Available files for registration loaded:', availableFiles);
 
-    // 회사 ID가 있으면 데이터 가져오기
-    if (companyId) {
-        // 1. 회사 기본 정보 가져오기 (Lambda)
-        const payload1 = {
-            table: 'companies',
-            id: companyId,
-            userId: userId
-        };
+    // 1. 회사 기본 정보 가져오기 (Lambda)
+    const payload1 = {
+        table: 'companies',
+        id: companyId,
+        userId: userId
+    };
 
-        APIcall(payload1, LAMBDA_URL, {
-            'Content-Type': 'application/json'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error('데이터를 불러오는 중 오류가 발생했습니다:', data.error);
-                } else {
-                    currentCompanyData = data;
-                    console.log('회사 정보:', data);
+    APIcall(payload1, LAMBDA_URL, {
+        'Content-Type': 'application/json'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('데이터를 불러오는 중 오류가 발생했습니다:', data.error);
+            } else {
+                currentCompanyData = data;
+                console.log('회사 정보:', data);
 
-                    if (data.companyName) {
-                        $('.notebook-title').text(data.companyName);
-                    }
-
-                    if (data.summary) {
-                        $('#summary').val(data.summary);
-                    }
-                    if (data.industry) {
-                        $('#industry').val(data.industry);
-                    }
-                    if (data.userId) {
-                        $('#userId').val(data.userId);
-                    }
+                if (data.companyName) {
+                    $('.notebook-title').text(data.companyName);
                 }
-            })
-            .catch(error => {
-                console.error('데이터 로드 실패:', error);
-            });
 
-        // 2. 파일 리스트 가져오기 (n8n Webhook)
-        APIcall({ companyId: companyId }, READ_WEBHOOK_URL, {
-            'Content-Type': 'application/json'
-        })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return response.text().then(text => text ? JSON.parse(text) : []);
-            })
-            .then(files => {
-                console.log('불러온 파일 리스트:', files);
-                if (Array.isArray(files)) {
-                    $sourceList.empty();
-                    files.forEach(fileObj => {
-                        // 서버 응답이 객체 형태이고 Key 프로퍼티에 파일 경로가 있는 경우
-                        if (fileObj && fileObj.Key) {
-                            const fileName = fileObj.Key.split('/').pop();
-                            addFileToSidebar(fileName, fileObj.Key);
-                        } else if (typeof fileObj === 'string') {
-                            // 만약 문자열로 온다면 그대로 사용
-                            addFileToSidebar(fileObj, fileObj);
-                        }
-                    });
+                if (data.summary) {
+                    $('#summary').val(data.summary);
                 }
-            })
-            .catch(error => {
-                console.error('파일 리스트 로드 실패:', error);
-            });
-    }
+                if (data.industry) {
+                    $('#industry').val(data.industry);
+                }
+                if (data.userId) {
+                    $('#userId').val(data.userId);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('데이터 로드 실패:', error);
+        });
+
+
 
     // Save 버튼 클릭 이벤트
     $('#save-summary').on('click', function () {
@@ -226,11 +201,6 @@ $(document).ready(function () {
             .replace(/\n\n/g, '<br><br>')
             .replace(/\n/g, '<br>');
 
-        // Wrap <li> tags with <ul>
-        if (html.includes('<li>')) {
-            // This is a very basic wrapper, might need improvement for complex nested lists
-            // html = html.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
-        }
         return html;
     }
 
@@ -489,7 +459,6 @@ $(document).ready(function () {
             $('input[name="industry"]').val($('#industry').val() || '');
             $('input[name="registrant"]').val($('#userId').val() || '');
         }
-        // updateFileDatalist(); // 기존 방식 제거
         loadAvailableFiles(); // 모달 열 때 최신화
         $registerModal.css('display', 'flex');
     });
@@ -712,16 +681,16 @@ $(document).ready(function () {
         $fileUpload.click();
     });
 
-
     $fileUpload.on('change', async function (e) {
-        if (!companyId) {
-            alert('회사 ID를 확인할 수 없습니다. 파일을 업로드할 수 없습니다.');
+        if (!userId) {
+            alert('사용자 ID를 확인할 수 없습니다. 파일을 업로드할 수 없습니다.');
             return;
         }
 
         const file = e.target.files[0];
         if (!file) return;
 
+        // 1. 파일 유효성 검사
         if (!filetypecheck(file)) {
             $fileUpload.val('');
             return;
@@ -731,30 +700,82 @@ $(document).ready(function () {
         const $newItem = $(`
             <li class="source-item uploading">
                 <span class="material-symbols-outlined spin">${icon}</span>
-                <span class="source-name">${file.name} (처리 중...)</span>
+                <span class="source-name">${file.name} (텍스트 추출 중...)</span>
             </li>
         `);
         $sourceList.append($newItem);
 
         try {
-            const response = await fileUpload(file, companyId);
-            if (response.ok) {
-                // 성공 UI 업데이트
-                $newItem.removeClass('uploading');
-                $newItem.find('.material-symbols-outlined').removeClass('spin');
-                $newItem.find('.source-name').text(file.name);
+            let extractedText = "";
 
-                // 새로고침이나 목록 업데이트 로직이 필요할 수 있지만 
-                // 여기서는 일단 UI만 업데이트
-                addMessage(`[${file.name}] 파일이 성공적으로 업로드되었습니다.`, 'ai');
-            } else {
-                throw new Error(`상태 코드: ${response.status}`);
+            // 2. 파일 타입별 텍스트 추출 로직 실행
+            if (file.type === "application/pdf") {
+                extractedText = await extractTextFromPDF(file);
+            } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+                extractedText = await extractTextFromDocx(file);
+            } else if (file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
+                extractedText = await extractTextFromPptx(file);
+            } else if (file.type === "text/plain") {
+                extractedText = await extractTextFromTxt(file);
             }
-        } catch (error) {
-            console.error('Upload error:', error);
-            $newItem.find('.source-name').text(`${file.name} (업로드 실패)`);
+
+            // 3. 추출 성공 여부 확인 및 업로드 진행
+            if (extractedText && extractedText.trim().length > 0) {
+                const cleanText = extractedText.trim();
+                console.log('텍스트 추출 완료:', cleanText.substring(0, 100) + '...');
+
+                // 업로드 상태 업데이트
+                $newItem.find('.source-name').text(`${file.name} (업로드 중...)`);
+
+                try {
+                    // 4. 통합 Lambda 호출 (fileUpload 내에서 fetch 수행)
+                    const fetchResponse = await fileUpload(file, userId, companyId);
+
+                    // [핵심] fetch 결과인 Response 객체에서 JSON 데이터를 읽어옴
+                    const result = await fetchResponse.json();
+                    console.log("Server Response Data:", result);
+
+                    // Lambda Proxy 응답 대응 (body가 문자열인 경우 재파싱)
+                    let finalData = result;
+                    if (result.body && typeof result.body === 'string') {
+                        finalData = JSON.parse(result.body);
+                    }
+
+                    // 성공 조건 판단 (HTTP 200 또는 Lambda 성공 메시지)
+                    if (fetchResponse.ok || finalData.statusCode == 200 || finalData.message === "Upload Success" || finalData.id) {
+                        console.log('Upload Success:', finalData);
+
+                        // 5. UI 업데이트
+                        $newItem.removeClass('uploading');
+                        $newItem.find('.material-symbols-outlined').removeClass('spin');
+                        $newItem.find('.source-name').text(file.name);
+
+                        // 삭제 시 필요한 정보(id, filename)를 데이터 속성에 저장
+                        $newItem.attr('data-id', finalData.id || result.id);
+                        $newItem.attr('data-filename', file.name);
+
+                        alert('업로드 및 정보 저장이 완료되었습니다.');
+
+                        // 6. 가용 파일 목록 새로고침
+                        loadAvailableFiles();
+                    } else {
+                        throw new Error(finalData.message || finalData.error || '서버 응답 오류');
+                    }
+                } catch (uploadErr) {
+                    console.error('Upload Error:', uploadErr);
+                    $newItem.find('.source-name').text(`${file.name} (업로드 실패)`);
+                    $newItem.find('.material-symbols-outlined').text('error').removeClass('spin');
+                    alert('파일 전송 중 오류가 발생했습니다: ' + uploadErr.message);
+                }
+            } else {
+                alert("파일에서 텍스트를 추출할 수 없습니다. 내용이 없거나 이미지만 있는 문서일 수 있습니다.");
+                $newItem.remove();
+            }
+        } catch (err) {
+            console.error('Total Process Error:', err);
+            $newItem.find('.source-name').text(`${file.name} (처리 실패)`);
             $newItem.find('.material-symbols-outlined').text('error').removeClass('spin');
-            alert('파일 업로드 중 오류가 발생했습니다.');
+            alert("처리에 실패했습니다: " + err.message);
         }
 
         $fileUpload.val('');
@@ -787,27 +808,32 @@ $(document).ready(function () {
             $btn.find('.material-symbols-outlined').text('sync').addClass('spin');
 
             try {
-                const response = await fetch(DELETE_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        companyId: companyId,
-                        fileKey: fileKey,
-                        fileName: fileName
-                    })
-                });
+                // Lambda를 통한 파일 삭제
+                const deletePayload = {
+                    table: 'company_files',
+                    action: 'delete',
+                    companyId: companyId,
+                    fileKey: fileKey,
+                    fileName: fileName,
+                    userId: userId
+                };
 
-                if (response.ok) {
+                const response = await APIcall(deletePayload, LAMBDA_URL, {
+                    'Content-Type': 'application/json'
+                });
+                const result = await response.json();
+
+                if (response.ok && !result.error) {
                     $newItem.fadeOut(300, function () {
                         $(this).remove();
                     });
                 } else {
-                    alert('삭제 처리에 실패했습니다. (서버 응답 오류)');
+                    alert('삭제 처리에 실패했습니다: ' + (result.error || '서버 응답 오류'));
                     $btn.find('.material-symbols-outlined').text('close').removeClass('spin');
                 }
             } catch (error) {
                 console.error('삭제 요청 중 오류 발생:', error);
-                alert('삭제 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.');
+                alert('삭제 중 오류가 발생했습니다: ' + error.message);
                 $btn.find('.material-symbols-outlined').text('close').removeClass('spin');
             }
         });

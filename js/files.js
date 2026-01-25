@@ -6,7 +6,8 @@ import {
     extractTextFromPptx,
     extractTextFromTxt,
     filetypecheck,
-    fileUpload
+    fileUpload,
+    fileDelete
 } from './File_Functions.js';
 
 const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
@@ -292,17 +293,19 @@ $(document).ready(function () {
         const file = e.target.files[0];
         if (!file) return;
 
+        // 1. 파일 유효성 검사
         if (!filetypecheck(file)) {
             $('#upload-file-input').val('');
             return;
         }
 
         $('#upload-file-name').val(file.name);
-        $('#extract-file').val('');
+        $('#extract-file').val('텍스트 추출 중...'); // 사용자 피드백
 
         try {
             let extractedText = "";
 
+            // 2. 파일 타입별 텍스트 추출 로직 실행
             if (file.type === "application/pdf") {
                 extractedText = await extractTextFromPDF(file);
             } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
@@ -313,64 +316,59 @@ $(document).ready(function () {
                 extractedText = await extractTextFromTxt(file);
             }
 
+            // 3. 추출 성공 여부 확인 및 업로드 진행
             if (extractedText && extractedText.trim().length > 0) {
-                $('#extract-file').val(extractedText.trim());
-                console.log('Text extraction successful. Length:', extractedText.length);
+                const cleanText = extractedText.trim();
+                $('#extract-file').val(cleanText);
 
-                // 1. 파일 바이너리 업로드 (n8n Webhook)
-                const uploadResponse = await fileUpload(file, '', userId);
-                if (uploadResponse.ok) {
-                    const uploadResult = await uploadResponse.json();
-                    // n8n 응답에서 파일 경로(Key 또는 Url) 추출 (서버 응답 규격에 맞춰 수정 필요할 수 있음)
-                    const fileLocation = uploadResult.fileUrl || uploadResult.key || file.name;
+                try {
+                    // 4. 통합 Lambda 호출 (fileUpload 내에서 fetch 수행)
+                    const fetchResponse = await fileUpload(file, userId, '');
 
-                    // 2. 파일 메타데이터 저장 (Lambda)
-                    const payload = {
-                        file_name: file.name,
-                        summary: extractedText.trim(),
-                        location: fileLocation,
-                        table: 'files',
-                        action: 'create',
-                        updatedAt: new Date().toISOString(),
-                        createdAt: new Date().toISOString(),
-                        userId: userId
-                    };
+                    // [핵심] fetch 결과인 Response 객체에서 JSON 데이터를 읽어옴
+                    const result = await fetchResponse.json();
+                    console.log("Server Response Data:", result);
 
-                    try {
-                        const saveResponse = await APIcall(payload, LAMBDA_URL, {
-                            'Content-Type': 'application/json'
-                        });
-                        const saveResult = await saveResponse.json();
+                    // Lambda Proxy 응답 대응 (body가 문자열인 경우 재파싱)
+                    let finalData = result;
+                    if (result.body && typeof result.body === 'string') {
+                        finalData = JSON.parse(result.body);
+                    }
 
-                        if (saveResult.error) {
-                            alert('DB 저장 중 오류가 발생했습니다: ' + saveResult.error);
-                        } else {
-                            alert('업로드 및 DB 저장이 완료되었습니다.');
-                            // 그리드 새로고침
+                    // 성공 조건 판단 (HTTP 200 또는 Lambda 성공 메시지)
+                    if (fetchResponse.ok || finalData.statusCode == 200 || finalData.message === "Upload Success") {
+                        console.log('Upload Success:', finalData);
+                        alert('업로드 및 정보 저장이 완료되었습니다.');
+
+                        // 5. 그리드 데이터 새로고침
+                        if (typeof gridApi !== 'undefined' && typeof datasource !== 'undefined') {
                             gridApi.setGridOption('datasource', datasource);
                         }
-                    } catch (saveErr) {
-                        console.error('Save Error:', saveErr);
-                        alert('DB 저장 요청에 실패했습니다: ' + saveErr.message);
+
+                        // 6. 입력 필드 초기화
+                        $('#upload-file-input').val('');
+                        $('#upload-file-name').val('');
+                        $('#extract-file').val('');
+                    } else {
+                        throw new Error(finalData.message || finalData.error || '서버 응답 오류');
                     }
-                } else {
-                    alert('파일 업로드에 실패했습니다.');
-                    $('#upload-file-name').val(file.name);
-                    $('#extract-file').val('');
+                } catch (uploadErr) {
+                    console.error('Upload Error:', uploadErr);
+                    alert('파일 전송 중 오류가 발생했습니다: ' + uploadErr.message);
                 }
             } else {
-                alert("파일에서 텍스트를 추출할 수 없습니다. (이미지 기반이거나 보안 설정이 있을 수 있습니다.)");
+                alert("파일에서 텍스트를 추출할 수 없습니다. 내용이 없거나 이미지만 있는 문서일 수 있습니다.");
                 $('#upload-file-name').val('');
                 $('#extract-file').val('');
             }
         } catch (err) {
-            console.error('Text extraction failed:', err);
-            alert("텍스트 추출 중 오류가 발생했습니다.");
+            console.error('Total Process Error:', err);
+            alert("처리에 실패했습니다: " + err.message);
         }
     });
 
     // 삭제 버튼 이벤트
-    $('#delete-file-btn').on('click', function () {
+    $('#delete-file-btn').on('click', async function () {
         if (!currentFile) return;
 
         const fileName = currentFile.file_name || '이 파일';
@@ -382,34 +380,26 @@ $(document).ready(function () {
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('삭제 중...');
 
-        APIcall({
-            id: currentFile.id,
-            table: 'files',
-            action: 'delete',
-            userId: userId
-        }, LAMBDA_URL, {
-            'Content-Type': 'application/json'
-        }, 'DELETE')
-            .then(response => response.json())
-            .then(result => {
-                if (result.error) {
-                    alert('삭제 중 오류가 발생했습니다: ' + result.error);
-                } else {
-                    alert('삭제되었습니다.');
-                    const modalEl = document.getElementById('file-modal');
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                    // 그리드 새로고침
-                    gridApi.setGridOption('datasource', datasource);
-                }
-            })
-            .catch(error => {
-                console.error('Delete Error:', error);
-                alert('삭제 요청에 실패했습니다.');
-            })
-            .finally(() => {
-                $btn.prop('disabled', false).text(originalText);
-            });
+        try {
+            const response = await fileDelete(currentFile.id, currentFile.file_name, userId);
+            const result = await response.json();
+
+            if (result.error) {
+                alert('삭제 중 오류가 발생했습니다: ' + result.error);
+            } else {
+                alert('삭제되었습니다.');
+                const modalEl = document.getElementById('file-modal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                // 그리드 새로고침
+                gridApi.setGridOption('datasource', datasource);
+            }
+        } catch (error) {
+            console.error('Delete Error:', error);
+            alert('삭제 요청에 실패했습니다: ' + error.message);
+        } finally {
+            $btn.prop('disabled', false).text(originalText);
+        }
     });
 
 });

@@ -1,11 +1,7 @@
-/**
- * PDF 파일에서 텍스트를 추출합니다.
- */
 import { APIcall } from './APIcallFunction.js';
 import { getEncoding } from "https://cdn.jsdelivr.net/npm/js-tiktoken@1.0.17/+esm";
 
-const UPLOAD_URL = 'http://ai.yleminvest.com:5678/webhook/dealchat-upload';
-// PDF.js 워커 설정
+const LAMBDA_URL = 'https://v5jm3bviyde6upouihsm5z7ki40eqazj.lambda-url.ap-northeast-2.on.aws/';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 
@@ -88,21 +84,59 @@ export function filetypecheck(file) {
     return true;
 }
 
-export async function fileUpload(file, companyId = null, userId = null) {
 
-    const formData = new FormData();
-    formData.append('file', file);             // 바이너리 파일
-    if (companyId) {
-        formData.append('companyId', companyId);   // 회사 ID
-    }
-    if (userId) {
-        formData.append('userId', userId);   // 사용자 ID
-    }
-    formData.append('fileName', file.name);    // 파일명
+export async function fileUpload(file, userId = null, companyId = null) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+            const base64Content = reader.result.split(',')[1];
 
-    const response = await APIcall(formData, UPLOAD_URL, {});
-    return response;
+            const payload = {
+                table: 'files',      // 추가: 통합 람다에서 files 핸들러로 라우팅
+                action: 'upload',
+                file_name: file.name,
+                content: base64Content,
+                is_base64: true,
+                content_type: file.type || 'application/octet-stream',
+                userId: userId,
+                companyId: companyId,
+                scanMode: false
+            };
+
+            try {
+                const response = await APIcall(payload, LAMBDA_URL, {
+                    'Content-Type': 'application/json'
+                });
+                resolve(response);
+            } catch (err) {
+                reject(err);
+            }
+        };
+        reader.onerror = (error) => reject(new Error('파일 읽기 실패'));
+    });
 }
+
+export async function fileDelete(fileId, fileName, userId, companyId = null) {
+    const payload = {
+        table: 'files',      // 추가
+        action: 'delete',
+        fileId: fileId,
+        file_name: fileName,
+        userId: userId,
+        companyId: companyId // 선택 사항
+    };
+
+    try {
+        const response = await APIcall(payload, LAMBDA_URL, {
+            'Content-Type': 'application/json'
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+}
+
 
 export function countTokens(text) {
     if (!text) return 0;

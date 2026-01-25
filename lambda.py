@@ -4,57 +4,62 @@ import os
 import base64
 import uuid
 from datetime import datetime
+from boto3.dynamodb.conditions import Attr, Key
 
+# 리소스 초기화 (Region 명시 권장)
 s3 = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
 
-# Initialize all tables
-file_table = dynamodb.Table('dealchat_files')
-company_table = dynamodb.Table('dealchat_companies')
-seller_table = dynamodb.Table('dealchat_sellers')
-buyer_table = dynamodb.Table('dealchat_buyers')
+# 테이블 매핑
+TABLES = {
+    'files': dynamodb.Table('dealchat_files'),
+    'companies': dynamodb.Table('dealchat_companies'),
+    'sellers': dynamodb.Table('dealchat_sellers'),
+    'buyers': dynamodb.Table('dealchat_buyers')
+}
 
 def lambda_handler(event, context):
     bucket_name = os.environ.get('BUCKET_NAME')
     
     try:
-        body_raw = event.get('body', '{}')
-        if event.get('isBase64Encoded', False):
-            body_raw = base64.b64decode(body_raw).decode('utf-8')
-        
-        body = json.loads(body_raw)
+        if 'body' in event:
+            body_raw = event['body']
+            if event.get('isBase64Encoded', False):
+                body_raw = base64.b64decode(body_raw).decode('utf-8')
+            body = json.loads(body_raw)
+        else:
+            # Lambda 직접 테스트 시 event 자체가 body일 수 있음
+            body = event
         action = body.get('action')
-        table_name = body.get('table')
+        table_key = body.get('table') # 'files', 'companies' 등
         
-        if not table_name:
-            return {"statusCode": 400, "body": json.dumps({"message": "table 파라미터가 필요합니다."})}
+        if not table_key or table_key not in TABLES:
+            return {"statusCode": 400, "body": json.dumps({"message": "유효한 table 파라미터가 필요합니다."})}
         
         if not action:
             return {"statusCode": 400, "body": json.dumps({"message": "action 파라미터가 필요합니다."})}
-        
-        # Match table and handle actions
-        match table_name:
+
+        # 테이블별 핸들러 호출
+        match table_key:
             case 'files':
                 return handle_files_table(action, body, bucket_name)
-            
             case 'companies':
                 return handle_companies_table(action, body)
-            
             case 'sellers':
                 return handle_sellers_table(action, body)
-            
             case 'buyers':
                 return handle_buyers_table(action, body)
-            
-            case _:
-                return {"statusCode": 400, "body": json.dumps({"message": f"지원하지 않는 테이블입니다: {table_name}"})}
-    
+                
     except Exception as e:
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        print(f"Error: {str(e)}") # CloudWatch 로그용
+        return {"statusCode": 500, "body": json.dumps({"error": "Internal Server Error", "details": str(e)})}
 
+# --- Table Handlers ---
 
 def handle_files_table(action, body, bucket_name):
-    """Handle dealchat_files table operations"""
+    table = TABLES['files']
+    now = datetime.now().isoformat()
+
     match action:
         case 'upload':
             user_id = body.get('userId')
@@ -63,121 +68,65 @@ def handle_files_table(action, body, bucket_name):
             
             file_name = body.get('file_name', 'unnamed')
             file_content = body.get('content', '')
-            company_id = body.get('companyId')
             
-            # Upload to S3
-            s3_key = f"files/{user_id}/{file_name}"
+            # 1. S3 Key 고유화 (UUID 추가로 덮어쓰기 방지)
+            file_uuid = str(uuid.uuid4())
+            s3_key = f"files/{user_id}/{file_uuid}_{file_name}"
+            
             file_data = base64.b64decode(file_content) if body.get('is_base64') else file_content.encode('utf-8')
-            s3.put_object(Bucket=bucket_name, Key=s3_key, Body=file_data, ContentType=body.get('content_type', 'image/png'))
-            
-            # Create DB entry
-            new_file_id = str(uuid.uuid4())
-            file_table.put_item(
-                Item={
-                    'id': new_file_id,
-                    'file_name': file_name,
-                    'location': s3_key,
-                    'userId': user_id,
-                    'updatedAt': datetime.now().isoformat(),
-                    'createdAt': datetime.now().isoformat()
-                }
+            s3.put_object(
+                Bucket=bucket_name, 
+                Key=s3_key, 
+                Body=file_data, 
+                ContentType=body.get('content_type', 'application/octet-stream')
             )
             
-            # Link to company if companyId provided
+            # 2. DB 기록
+            new_file_id = file_uuid
+            item = {
+                'id': new_file_id,
+                'file_name': file_name,
+                'location': s3_key,
+                'userId': user_id,
+                'summary': body.get('summary', ''),
+                'tags': body.get('tags', []),
+                'updatedAt': now,
+                'createdAt': now
+            }
+            table.put_item(Item=item)
+            
+            # 3. 회사 연동 (Optional)
+            company_id = body.get('companyId')
             if company_id:
-                response = company_table.get_item(Key={'id': company_id})
-                if 'Item' in response:
-                    attachments = response['Item'].get('attachments', [])
-                    if new_file_id not in attachments:
-                        company_table.update_item(
-                            Key={'id': company_id},
-                            UpdateExpression="SET attachments = list_append(if_not_exists(attachments, :empty_list), :file_id)",
-                            ExpressionAttributeValues={':file_id': [new_file_id], ':empty_list': []}
-                        )
+                TABLES['companies'].update_item(
+                    Key={'id': company_id},
+                    UpdateExpression="SET attachments = list_append(if_not_exists(attachments, :empty_list), :file_id), updatedAt = :now",
+                    ExpressionAttributeValues={':file_id': [new_file_id], ':empty_list': [], ':now': now}
+                )
             
             return {"statusCode": 200, "body": json.dumps({"message": "Upload Success", "file_id": new_file_id})}
-        
+
+        case 'get':
+            return perform_get_query(table, body, "file")
+
         case 'delete':
             target_id = body.get('fileId')
-            company_id = body.get('companyId')
-            
-            if not target_id:
-                return {"statusCode": 400, "body": json.dumps({"message": "삭제할 파일 id가 필요합니다."})}
-            
-            # If companyId provided, only remove reference from company
-            if company_id:
-                response = company_table.get_item(Key={'id': company_id})
-                if 'Item' in response:
-                    attachments = response['Item'].get('attachments', [])
-                    if target_id in attachments:
-                        new_attachments = [a for a in attachments if a != target_id]
-                        company_table.update_item(
-                            Key={'id': company_id},
-                            UpdateExpression="SET attachments = :val",
-                            ExpressionAttributeValues={':val': new_attachments}
-                        )
-                return {"statusCode": 200, "body": json.dumps({"message": "Company reference removed"})}
-            
-            # Otherwise, delete from S3 and DB
-            else:
-                file_item = file_table.get_item(Key={'id': target_id}).get('Item')
-                if file_item:
-                    actual_s3_key = file_item.get('location')
-                    if actual_s3_key:
-                        s3.delete_object(Bucket=bucket_name, Key=actual_s3_key)
-                    file_table.delete_item(Key={'id': target_id})
-                
-                return {"statusCode": 200, "body": json.dumps({"message": "Full deletion (S3 & DB) completed"})}
-        
-        case 'get':
-            file_id = body.get('fileId')
-            user_id = body.get('userId')
-            keyword = body.get('keyword')
-            scan_mode = body.get('scanMode', False)
-            
-            if file_id:
-                # Get specific file
-                response = file_table.get_item(Key={'id': file_id})
-                if 'Item' in response:
-                    return {"statusCode": 200, "body": json.dumps({"file": response['Item']})}
-                else:
-                    return {"statusCode": 404, "body": json.dumps({"message": "파일을 찾을 수 없습니다."})}
-            elif user_id:
-                # Get all files for user (scan with filter)
-                if keyword:
-                    # Filter by userId and keyword in file_name, summary, or tags
-                    from boto3.dynamodb.conditions import Attr
-                    response = file_table.scan(
-                        FilterExpression=Attr('userId').eq(user_id) & (
-                            Attr('file_name').contains(keyword) | 
-                            Attr('summary').contains(keyword) | 
-                            Attr('tags').contains(keyword)
-                        )
-                    )
-                else:
-                    # Get all files for user without keyword filter
-                    response = file_table.scan(
-                        FilterExpression='userId = :uid',
-                        ExpressionAttributeValues={':uid': user_id}
-                    )
-                return {"statusCode": 200, "body": json.dumps({"files": response.get('Items', [])})}
-            elif scan_mode:
-                # Get all files for user (scan without filter)
-                response = file_table.scan()
-                return {"statusCode": 200, "body": json.dumps({"files": response.get('Items', [])})}
-            else:
-               return {"statusCode": 400, "body": json.dumps({"message": "fileId 또는 userId가 필요합니다."})}
-        
-        case _:
-            return {"statusCode": 400, "body": json.dumps({"message": f"지원하지 않는 action입니다: {action}"})}
-
+            file_item = table.get_item(Key={'id': target_id}).get('Item')
+            if file_item:
+                # S3 삭제 후 DB 삭제
+                s3.delete_object(Bucket=bucket_name, Key=file_item['location'])
+                table.delete_item(Key={'id': target_id})
+                return {"statusCode": 200, "body": json.dumps({"message": "Deleted successfully"})}
+            return {"statusCode": 404, "body": json.dumps({"message": "파일을 찾을 수 없습니다."})}
 
 def handle_companies_table(action, body):
-    """Handle dealchat_companies table operations"""
+    table = TABLES['companies']
+    now = datetime.now().isoformat()
+    
     match action:
         case 'upload':
             company_id = str(uuid.uuid4())
-            company_data = {
+            item = {
                 'id': company_id,
                 'companyName': body.get('companyName', ''),
                 'companyEnName': body.get('companyEnName', ''),
@@ -189,52 +138,17 @@ def handle_companies_table(action, body):
                 'createdAt': datetime.now().isoformat(),
                 'updatedAt': datetime.now().isoformat()
             }
-            company_table.put_item(Item=company_data)
-            return {"statusCode": 200, "body": json.dumps({"message": "Company created", "companyId": company_id})}
-        
+            # 필요한 필드들 자동 병합
+            item.update({k: body.get(k, '') for k in ['summary', 'industry', 'comments', 'companyEnName']})
+            table.put_item(Item=item)
+            return {"statusCode": 200, "body": json.dumps({"companyId": company_id})}
+            
         case 'get':
-            company_id = body.get('companyId')
-            user_id = body.get('userId')
-            keyword = body.get('keyword')
-            scan_mode = body.get('scanMode', False)
+            return perform_get_query(table, body, "company")
             
-            if company_id:
-                response = company_table.get_item(Key={'id': company_id})
-                if 'Item' in response:
-                    return {"statusCode": 200, "body": json.dumps({"company": response['Item']})}
-                else:
-                    return {"statusCode": 404, "body": json.dumps({"message": "회사를 찾을 수 없습니다."})}
-            elif user_id:
-                if keyword:
-                    response = company_table.scan(
-                        FilterExpression=Attr('userId').eq(user_id) & (
-                        Attr('companyName').contains(keyword) | 
-                        Attr('summary').contains(keyword) | 
-                        Attr('industry').contains(keyword)
-                        )
-                    )
-                else:
-                    response = company_table.scan(
-                        FilterExpression='userId = :uid',
-                        ExpressionAttributeValues={':uid': user_id}
-                    )
-                return {"statusCode": 200, "body": json.dumps({"companies": response.get('Items', [])})}
-            elif scan_mode:
-                response = company_table.scan()
-                return {"statusCode": 200, "body": json.dumps({"companies": response.get('Items', [])})}
-            else:
-                return {"statusCode": 400, "body": json.dumps({"message": "companyId 또는 userId가 필요합니다."})}
-        
         case 'delete':
-            company_id = body.get('companyId')
-            if not company_id:
-                return {"statusCode": 400, "body": json.dumps({"message": "companyId가 필요합니다."})}
-            
-            company_table.delete_item(Key={'id': company_id})
-            return {"statusCode": 200, "body": json.dumps({"message": "Company deleted"})}
-        
-        case _:
-            return {"statusCode": 400, "body": json.dumps({"message": f"지원하지 않는 action입니다: {action}"})}
+            table.delete_item(Key={'id': body.get('companyId')})
+            return {"statusCode": 200, "body": json.dumps({"message": "Deleted"})}
 
 
 def handle_sellers_table(action, body):
@@ -370,3 +284,39 @@ def handle_buyers_table(action, body):
         
         case _:
             return {"statusCode": 400, "body": json.dumps({"message": f"지원하지 않는 action입니다: {action}"})}
+
+def perform_get_query(table, body, item_label):
+    """
+    중복되는 조회 로직을 통합. 
+    userId 조회 시 Scan 대신 Query(GSI)를 사용하도록 유도.
+    """
+    item_id = body.get(f'{item_label}Id')
+    user_id = body.get('userId')
+    keyword = body.get('keyword')
+
+    # 1. 단일 아이템 조회 (Primary Key)
+    if item_id:
+        res = table.get_item(Key={'id': item_id})
+        return {"statusCode": 200, "body": json.dumps({item_label: res.get('Item')})}
+
+    # 2. 사용자별 목록 조회
+    if user_id:
+        # GSI가 'userId-index'로 생성되어 있다고 가정 (성능 최적화)
+        try:
+            # 키워드가 있다면 FilterExpression 추가
+            query_params = {
+                'IndexName': 'userId-index',
+                'KeyConditionExpression': Key('userId').eq(user_id)
+            }
+            if keyword:
+                # 테이블별 검색 필드 설정 (유연하게 대처 가능)
+                query_params['FilterExpression'] = Attr('companyName').contains(keyword) | Attr('summary').contains(keyword)
+            
+            res = table.query(**query_params)
+            return {"statusCode": 200, "body": json.dumps({f"{item_label}s": res.get('Items', [])})}
+        except:
+            # GSI가 없을 경우를 대비한 Fallback (Scan) - 가급적 GSI 생성을 권장
+            res = table.scan(FilterExpression=Attr('userId').eq(user_id))
+            return {"statusCode": 200, "body": json.dumps({f"{item_label}s": res.get('Items', [])})}
+
+    return {"statusCode": 400, "body": json.dumps({"message": "ID 또는 userId가 필요합니다."})}

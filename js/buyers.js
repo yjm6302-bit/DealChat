@@ -55,7 +55,9 @@ $(document).ready(function () {
             const keyword = ($('#search-input').val() || "").trim();
 
             APIcall({
+                action: 'get',
                 table: 'buyers',
+                userId: userId,
                 keyword: keyword
             }, LAMBDA_URL, {
                 'Content-Type': 'application/json'
@@ -151,11 +153,11 @@ $(document).ready(function () {
             interest_industry: $('input[name="interest_industry"]').val().trim(),
             investment_amount: $('input[name="investment_amount"]').val().trim(),
             etc: $('input[name="etc"]').val().trim(),
-            userId: "67b320626fc0e9133183cb8b",
+            userId: userId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             table: 'buyers',
-            action: currentAction
+            action: 'upload'
         };
 
         if (currentAction === 'create') {

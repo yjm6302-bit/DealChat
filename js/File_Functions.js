@@ -1,7 +1,7 @@
 import { APIcall } from './APIcallFunction.js';
 import { getEncoding } from "https://cdn.jsdelivr.net/npm/js-tiktoken@1.0.17/+esm";
 
-const LAMBDA_URL = 'https://v5jm3bviyde6upouihsm5z7ki40eqazj.lambda-url.ap-northeast-2.on.aws/';
+const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 

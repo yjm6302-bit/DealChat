@@ -63,6 +63,7 @@ $(document).ready(function () {
         getRows: (params) => {
             const keyword = ($('#search-input').val() || "").trim();
             const payload = {
+                action: 'get',
                 table: 'companies',
                 userId: userId,
                 keyword: keyword
@@ -152,12 +153,11 @@ $(document).ready(function () {
         }
 
         const payload = {
-            id: crypto.randomUUID(),
             companyName: companyName,
             industry: industry,
             summary: summary,
             table: 'companies',
-            action: 'create',
+            action: 'upload',
             userId: userId
         };
 

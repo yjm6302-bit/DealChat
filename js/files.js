@@ -78,6 +78,7 @@ $(document).ready(function () {
             const keyword = ($('#search-input').val() || "").trim();
 
             APIcall({
+                action: 'get',
                 table: 'files',
                 userId: userId,
                 keyword: keyword

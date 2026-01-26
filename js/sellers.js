@@ -53,7 +53,9 @@ $(document).ready(function () {
             const keyword = ($('#search-input').val() || "").trim();
 
             APIcall({
+                action: 'get',
                 table: 'sellers',
+                userId: userId,
                 keyword: keyword
             }, LAMBDA_URL, {
                 'Content-Type': 'application/json'

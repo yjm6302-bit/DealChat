@@ -86,6 +86,23 @@ export function filetypecheck(file) {
 
 
 export async function fileUpload(file, userId = null, companyId = null) {
+    // 1. 텍스트 추출
+    let extractedText = "";
+    try {
+        if (file.type === "application/pdf") {
+            extractedText = await extractTextFromPDF(file);
+        } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            extractedText = await extractTextFromDocx(file);
+        } else if (file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
+            extractedText = await extractTextFromPptx(file);
+        } else if (file.type === "text/plain") {
+            extractedText = await extractTextFromTxt(file);
+        }
+    } catch (err) {
+        console.warn("Text extraction failed, continuing with upload anyway:", err);
+    }
+
+    // 2. Base64 변환 및 업로드
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -93,12 +110,13 @@ export async function fileUpload(file, userId = null, companyId = null) {
             const base64Content = reader.result.split(',')[1];
 
             const payload = {
-                table: 'files',      // 추가: 통합 람다에서 files 핸들러로 라우팅
+                table: 'files',
                 action: 'upload',
                 file_name: file.name,
                 content: base64Content,
                 is_base64: true,
                 content_type: file.type || 'application/octet-stream',
+                summary: extractedText.trim(), // 추출된 텍스트를 요약 필드에 자동 삽입
                 userId: userId,
                 companyId: companyId,
                 scanMode: false

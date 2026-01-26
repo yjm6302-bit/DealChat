@@ -289,81 +289,40 @@ $(document).ready(function () {
         $('#upload-file-input').click();
     });
 
-    // 파일 선택 시 이름 자동 입력 및 텍스트 추출
+    // 파일 선택 시 이름 자동 입력 및 업로드 실행
     $('#upload-file-input').on('change', async function (e) {
         const file = e.target.files[0];
         if (!file) return;
 
         // 1. 파일 유효성 검사
         if (!filetypecheck(file)) {
-            $('#upload-file-input').val('');
+            $(this).val('');
             return;
         }
 
         $('#upload-file-name').val(file.name);
-        $('#extract-file').val('텍스트 추출 중...'); // 사용자 피드백
 
         try {
-            let extractedText = "";
+            // 2. 통합 업로드 호출 (텍스트 추출 및 S3/DB 저장이 내부에서 자동으로 일어남)
+            const fetchResponse = await fileUpload(file, userId, '');
+            const result = await fetchResponse.json();
 
-            // 2. 파일 타입별 텍스트 추출 로직 실행
-            if (file.type === "application/pdf") {
-                extractedText = await extractTextFromPDF(file);
-            } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-                extractedText = await extractTextFromDocx(file);
-            } else if (file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
-                extractedText = await extractTextFromPptx(file);
-            } else if (file.type === "text/plain") {
-                extractedText = await extractTextFromTxt(file);
+            // Lambda Proxy 응답 대응
+            let finalData = result;
+            if (result.body && typeof result.body === 'string') {
+                finalData = JSON.parse(result.body);
             }
 
-            // 3. 추출 성공 여부 확인 및 업로드 진행
-            if (extractedText && extractedText.trim().length > 0) {
-                const cleanText = extractedText.trim();
-                $('#extract-file').val(cleanText);
-
-                try {
-                    // 4. 통합 Lambda 호출 (fileUpload 내에서 fetch 수행)
-                    const fetchResponse = await fileUpload(file, userId, '');
-
-                    // [핵심] fetch 결과인 Response 객체에서 JSON 데이터를 읽어옴
-                    const result = await fetchResponse.json();
-                    console.log("Server Response Data:", result);
-
-                    // Lambda Proxy 응답 대응 (body가 문자열인 경우 재파싱)
-                    let finalData = result;
-                    if (result.body && typeof result.body === 'string') {
-                        finalData = JSON.parse(result.body);
-                    }
-
-                    // 성공 조건 판단 (HTTP 200 또는 Lambda 성공 메시지)
-                    if (fetchResponse.ok || finalData.statusCode == 200 || finalData.message === "Upload Success") {
-                        console.log('Upload Success:', finalData);
-                        alert('업로드 및 정보 저장이 완료되었습니다.');
-
-                        // 5. 그리드 데이터 새로고침
-                        if (typeof gridApi !== 'undefined' && typeof datasource !== 'undefined') {
-                            gridApi.setGridOption('datasource', datasource);
-                        }
-
-                        // 6. 입력 필드 초기화
-                        $('#upload-file-input').val('');
-                        $('#upload-file-name').val('');
-                        $('#extract-file').val('');
-                    } else {
-                        throw new Error(finalData.message || finalData.error || '서버 응답 오류');
-                    }
-                } catch (uploadErr) {
-                    console.error('Upload Error:', uploadErr);
-                    alert('파일 전송 중 오류가 발생했습니다: ' + uploadErr.message);
-                }
-            } else {
-                alert("파일에서 텍스트를 추출할 수 없습니다. 내용이 없거나 이미지만 있는 문서일 수 있습니다.");
+            if (fetchResponse.ok || finalData.statusCode == 200) {
+                alert('업로드 및 정보 저장이 완료되었습니다.');
+                gridApi.setGridOption('datasource', datasource); // 그리드 새로고침
+                $(this).val('');
                 $('#upload-file-name').val('');
-                $('#extract-file').val('');
+            } else {
+                throw new Error(finalData.message || '서버 응답 오류');
             }
         } catch (err) {
-            console.error('Total Process Error:', err);
+            console.error('Upload Process Error:', err);
             alert("처리에 실패했습니다: " + err.message);
         }
     });

@@ -37,13 +37,12 @@ const gridOptions = {
 
 $(document).ready(function () {
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    const userId = userData.id;
-
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
-        location.href = './html/signin.html';
+        location.href = './signin.html';
         return;
     }
+    const userId = userData.id;
 
     const gridDiv = document.querySelector('#sellerGrid');
     gridApi = agGrid.createGrid(gridDiv, gridOptions);
@@ -53,7 +52,9 @@ $(document).ready(function () {
             const keyword = ($('#search-input').val() || "").trim();
 
             APIcall({
+                action: 'get',
                 table: 'sellers',
+                scanMode: true,
                 keyword: keyword
             }, LAMBDA_URL, {
                 'Content-Type': 'application/json'

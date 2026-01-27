@@ -48,13 +48,12 @@ let gridApi;
 $(document).ready(function () {
     // 로그인 체크
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    const userId = userData.id;
-
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
         location.href = './signin.html';
         return;
     }
+    const userId = userData.id;
 
     const gridDiv = document.querySelector('#companyGrid');
     gridApi = agGrid.createGrid(gridDiv, gridOptions);
@@ -101,6 +100,7 @@ $(document).ready(function () {
 
         const deletePromises = selectedRows.map(row => {
             const payload = {
+                action: 'delete',
                 id: row.id,
                 table: 'companies',
                 userId: userId

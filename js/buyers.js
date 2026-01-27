@@ -9,13 +9,12 @@ let openBuyerModal;
 
 $(document).ready(function () {
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    const userId = userData.id;
-
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
         location.href = './signin.html';
         return;
     }
+    const userId = userData.id;
 
     const columnDefs = [
         { field: "id", headerName: "ID", sortable: true, filter: true, width: 100, hide: true },

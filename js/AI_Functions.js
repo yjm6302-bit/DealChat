@@ -48,7 +48,7 @@ export function addAiResponse(userInput, sourceTexts) {
     }
 
     // API 호출 (Promise를 반환하므로 호출부에서 처리가 필요할 수 있습니다)
-    return APIcall(prompts, AI_LAMBDA_URL, { 'Content-Type': 'application/json' });
+    return APIcall({ body: prompts }, AI_LAMBDA_URL, { 'Content-Type': 'application/json' });
 }
 
 export function getRAGdata() {

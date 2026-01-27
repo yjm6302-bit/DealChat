@@ -6,13 +6,12 @@ const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
 $(document).ready(function () {
     // 로그인 체크
     const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    const userId = userData.id;
-
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
         location.href = './signin.html';
         return;
     }
+    const userId = userData.id;
 
     const urlParams = new URLSearchParams(window.location.search);
     const sellerId = urlParams.get('id');
@@ -25,6 +24,7 @@ $(document).ready(function () {
     // 0. 가용 파일 목록(dealchat_files) 불러오기
     function loadAvailableFiles() {
         APIcall({
+            action: 'get',
             table: 'files',
             userId: userId,
             keyword: ''
@@ -58,6 +58,7 @@ $(document).ready(function () {
     // 1. 데이터 불러오기
     function loadSellerData() {
         APIcall({
+            action: 'get',
             table: 'sellers',
             id: sellerId,
             userId: userId

@@ -9,6 +9,14 @@ $(document).ready(function () {
     let currentCompanyData = null;
     let availableFiles = [];
     let searchResults = [];
+    
+    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+
+    if (!userData || !userData.isLoggedIn) {
+        alert('로그인 후 이용해주세요.');
+        location.href = './signin.html';
+        return;
+    }
 
     // URL에서 id 파라미터 추출
     const urlParams = new URLSearchParams(window.location.search);
@@ -20,13 +28,7 @@ $(document).ready(function () {
         return;
     }
 
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
 
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
     const userId = userData.id;
     $('#userName').text(userData.name);
 
@@ -40,6 +42,7 @@ $(document).ready(function () {
     // 0. 가용 파일 목록(dealchat_files) 불러오기
     function loadAvailableFiles() {
         APIcall({
+            action: 'get',
             table: 'files',
             userId: userId
         }, LAMBDA_URL, {
@@ -66,6 +69,7 @@ $(document).ready(function () {
 
     // 1. 회사 기본 정보 가져오기 (Lambda)
     const payload1 = {
+        action: 'get',
         table: 'companies',
         id: companyId,
         userId: userId

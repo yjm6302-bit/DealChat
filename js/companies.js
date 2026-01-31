@@ -1,6 +1,7 @@
+import { checkAuth } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 
 const columnDefs = [
     { field: "check", headerName: "CH", sortable: false, filter: false, flex: 0.2, checkboxSelection: true, headerCheckboxSelection: true },
@@ -47,12 +48,8 @@ let gridApi;
 
 $(document).ready(function () {
     // 로그인 체크
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
+    const userData = checkAuth();
+    if (!userData) return;
     const userId = userData.id;
 
     const gridDiv = document.querySelector('#companyGrid');
@@ -68,7 +65,7 @@ $(document).ready(function () {
                 keyword: keyword
             };
 
-            APIcall(payload, LAMBDA_URL, { 'Content-Type': 'application/json' })
+            APIcall(payload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
@@ -106,7 +103,7 @@ $(document).ready(function () {
                 userId: userId
             };
 
-            return APIcall(payload, LAMBDA_URL, { 'Content-Type': 'application/json' }, 'DELETE')
+            return APIcall(payload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }, 'DELETE')
                 .then(res => res.json());
         });
 
@@ -165,7 +162,7 @@ $(document).ready(function () {
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('등록 중...');
 
-        APIcall(payload, LAMBDA_URL, { 'Content-Type': 'application/json' })
+        APIcall(payload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
             .then(response => response.json())
             .then(result => {
                 if (result.error) alert('등록 중 오류 발생: ' + result.error);

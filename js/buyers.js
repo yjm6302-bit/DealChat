@@ -1,6 +1,7 @@
+import { checkAuth } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 
 let gridApi;
 
@@ -8,12 +9,8 @@ let gridApi;
 let openBuyerModal;
 
 $(document).ready(function () {
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
+    const userData = checkAuth();
+    if (!userData) return;
     const userId = userData.id;
 
     const columnDefs = [
@@ -58,7 +55,7 @@ $(document).ready(function () {
                 table: 'buyers',
                 userId: userId,
                 keyword: keyword
-            }, LAMBDA_URL, {
+            }, SUPABASE_ENDPOINT, {
                 'Content-Type': 'application/json'
             })
                 .then(response => response.json())
@@ -290,7 +287,7 @@ $(document).ready(function () {
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('등록 중...');
 
-        APIcall(formData, LAMBDA_URL, {
+        APIcall(formData, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())
@@ -329,7 +326,7 @@ $(document).ready(function () {
             id: id,
             table: 'buyers',
             action: 'delete'
-        }, LAMBDA_URL, {
+        }, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         }, 'DELETE')
             .then(response => response.json())

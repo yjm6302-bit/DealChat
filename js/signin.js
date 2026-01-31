@@ -1,6 +1,6 @@
 import { APIcall } from './APIcallFunction.js';
 
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 
 $(document).ready(function () {
   const $form = $('#signin-form');
@@ -26,7 +26,7 @@ $(document).ready(function () {
       table: 'users',
       action: 'read',
       email: email
-    }, LAMBDA_URL, {
+    }, SUPABASE_ENDPOINT, {
       'Content-Type': 'application/json'
     })
       .then(response => response.json())

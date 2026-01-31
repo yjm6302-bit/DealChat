@@ -393,3 +393,9 @@ entrypoint = "./functions/test-python/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/test-python/*.html" ]
+
+[functions.upload-handler]
+verify_jwt = false
+
+[functions.ai-handler]
+verify_jwt = false

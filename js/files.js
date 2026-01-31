@@ -1,3 +1,4 @@
+import { checkAuth } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 import { addAiResponse, getRAGdata } from './AI_Functions.js';
 import {
@@ -6,7 +7,7 @@ import {
     fileDelete
 } from './File_Functions.js';
 
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 const S3_BASE_URL = 'https://dealchat.co.kr.s3.ap-northeast-2.amazonaws.com/';
 
 const columnDefs = [
@@ -93,12 +94,8 @@ const gridOptions = {
 let gridApi;
 
 $(document).ready(function () {
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
+    const userData = checkAuth();
+    if (!userData) return;
     const userId = userData.id;
     const gridDiv = document.querySelector('#fileGrid');
     gridApi = agGrid.createGrid(gridDiv, gridOptions);
@@ -112,7 +109,7 @@ $(document).ready(function () {
                 table: 'files',
                 userId: userId,
                 keyword: keyword
-            }, LAMBDA_URL, {
+            }, SUPABASE_ENDPOINT, {
                 'Content-Type': 'application/json'
             })
                 .then(response => response.json())
@@ -302,7 +299,7 @@ $(document).ready(function () {
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('저장 중...');
 
-        APIcall(payload, LAMBDA_URL, {
+        APIcall(payload, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())

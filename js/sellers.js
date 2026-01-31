@@ -1,6 +1,7 @@
+import { checkAuth } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 
 const columnDefs = [
     { field: "id", headerName: "ID", sortable: true, filter: true, width: 100, hide: true },
@@ -36,12 +37,8 @@ let gridApi;
 
 $(document).ready(function () {
     // 로그인 체크
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
+    const userData = checkAuth();
+    if (!userData) return;
     const userId = userData.id;
 
     const gridDiv = document.querySelector('#sellerGrid');
@@ -56,7 +53,7 @@ $(document).ready(function () {
                 table: 'sellers',
                 userId: userId,
                 keyword: keyword
-            }, LAMBDA_URL, {
+            }, SUPABASE_ENDPOINT, {
                 'Content-Type': 'application/json'
             })
                 .then(response => response.json())

@@ -1,4 +1,5 @@
-const LAMBDA_URL = 'https://fx4w4useafzrufeqxfqui6z5p40aazkb.lambda-url.ap-northeast-2.on.aws/';
+import { checkAuth } from './auth_utils.js';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 
 const columnDefs = [
     { field: "id", headerName: "ID", sortable: true, filter: true, width: 100, hide: true },
@@ -43,12 +44,12 @@ $(document).ready(function () {
             // 람다 함수가 POST를 지원하고, keyword가 없어도 전체 조회를 지원하도록 수정되었으므로
             // 명확하게 JSON 바디를 담아 POST 요청을 보냅니다.
             window.APIcall({
-                    table: 'companies',
-                    keyword: keyword,
-                    action: 'get' // Added action: 'get' to match Supabase function expectation
-                }, LAMBDA_URL, {
-                    'Content-Type': 'application/json'
-                })
+                table: 'companies',
+                keyword: keyword,
+                action: 'get' // Added action: 'get' to match Supabase function expectation
+            }, SUPABASE_ENDPOINT, {
+                'Content-Type': 'application/json'
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {

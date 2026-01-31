@@ -21,7 +21,8 @@ window.config = {
   supabase: {
     url: 'https://pqhqmvymssjtjhmiloga.supabase.co',
     anonKey: 'sb_publishable_NSrXrC4dpsKnPBviNDl-7g_fcNZeH4I',
-    endpoint: 'https://pqhqmvymssjtjhmiloga.supabase.co/functions/v1/upload-handler'
+    uploadHandlerUrl: 'https://pqhqmvymssjtjhmiloga.supabase.co/functions/v1/upload-handler',
+    aiHandlerUrl: 'https://pqhqmvymssjtjhmiloga.supabase.co/functions/v1/ai-handler'
   }
 };
 /**

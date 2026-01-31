@@ -1,8 +1,11 @@
-import { APIcall } from "./APIcallFunction.js";
-import { countTokens } from "./File_Functions.js";
+import { APIcall } from './APIcallFunction.js';
+import { countTokens } from './File_Functions.js';
+
+const UPLOAD_HANDLER = window.config.supabase.uploadHandlerUrl;
+const AI_HANDLER = window.config.supabase.aiHandlerUrl;
 
 export function addAiResponse(userInput, sourceTexts) {
-    const AI_LAMBDA_URL = window.config.supabase.url + '/functions/v1/ai-handler';
+    const AI_ENDPOINT = AI_HANDLER;
 
     // 토큰 제한 설정 (Lambda 타임아웃 및 페이로드 제한을 고려하여 30k 정도로 제한)
     const MAX_TOKEN = 120000;
@@ -49,10 +52,10 @@ export function addAiResponse(userInput, sourceTexts) {
     }
 
     // API 호출 (Promise를 반환하므로 호출부에서 처리가 필요할 수 있습니다)
-    return APIcall({ body: prompts }, AI_LAMBDA_URL, { 'Content-Type': 'application/json' });
+    return APIcall({ body: prompts }, AI_ENDPOINT, { 'Content-Type': 'application/json' });
 }
 
-export async function searchVectorDB(query, companyId, lambdaUrl) {
+export async function searchVectorDB(query, companyId) {
     if (!query || !companyId) return "";
 
     const payload = {
@@ -63,7 +66,7 @@ export async function searchVectorDB(query, companyId, lambdaUrl) {
     };
 
     try {
-        const response = await APIcall(payload, lambdaUrl, { 'Content-Type': 'application/json' });
+        const response = await APIcall(payload, AI_HANDLER, { 'Content-Type': 'application/json' });
         const data = await response.json();
 
         // Lambda 응답 구조에 따라 처리 (문자열 배열 가정)

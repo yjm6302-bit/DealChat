@@ -1,7 +1,8 @@
 import { addAiResponse, getRAGdata, searchVectorDB } from './AI_Functions.js';
 import { APIcall } from './APIcallFunction.js';
 import { filetypecheck, fileUpload, extractTextFromPDF, extractTextFromDocx, extractTextFromPptx, extractTextFromTxt, validateText } from './File_Functions.js';
-const LAMBDA_URL = window.config.supabase.endpoint;
+import { checkAuth } from './auth_utils.js';
+const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 const SUPABASE_STORAGE_URL = `${window.config.supabase.url}/storage/v1/object/public/uploads/`;
 
 $(document).ready(function () {
@@ -9,13 +10,8 @@ $(document).ready(function () {
     let availableFiles = [];
     let searchResults = [];
 
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
-
-    if (!userData || !userData.isLoggedIn) {
-        alert('로그인 후 이용해주세요.');
-        location.href = './signin.html';
-        return;
-    }
+    const userData = checkAuth();
+    if (!userData) return;
 
     // URL에서 id 파라미터 추출
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,13 +31,13 @@ $(document).ready(function () {
     const $chatMessages = $('#chat-messages');
     const $welcomeScreen = $('.welcome-screen');
     const $guidePanel = $('#guide-panel');
-    // 0. 가용 파일 목록(dealchat_files) 불러오기
+    // 0. 가용 파일 목록(files) 불러오기
     function loadAvailableFiles() {
         return APIcall({
             action: 'get',
             table: 'files',
             userId: userId
-        }, LAMBDA_URL, {
+        }, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())
@@ -69,7 +65,7 @@ $(document).ready(function () {
             userId: userId
         };
 
-        APIcall(payload1, LAMBDA_URL, {
+        APIcall(payload1, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())
@@ -95,34 +91,34 @@ $(document).ready(function () {
                     }
                     // 기존 첨부파일 로드 (attachments는 fileId 문자열 배열)
                     if (data.attachments && data.attachments.length > 0) {
-                        let validAttachments = [];
-                        let missingFound = false;
-
                         data.attachments.forEach(fileId => {
                             const file = availableFiles.find(f => f.id === fileId);
                             if (file) {
                                 addFileToSourceList(file.name || file.file_name, file.id, file.location);
-                                validAttachments.push(fileId);
                             } else {
-                                console.warn('파일을 찾을 수 없습니다 (자동 삭제 대상):', fileId);
-                                missingFound = true;
+                                // [Fix] 유행하지 않은 파일이라고 바로 삭제하지 않고, 일단 개별 조회를 시도하거나 무시함.
+                                // 다른 참여자가 올린 파일일 경우 availableFiles에 없을 수 있음.
+                                console.warn('첨부파일이 가용 목록에 없으나 삭제하지 않고 유지합니다:', fileId);
+
+                                // 개별 조회를 통해 목록에 추가 시도 (필요 시)
+                                APIcall({ action: 'get', table: 'files', id: fileId }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
+                                    .then(res => res.json())
+                                    .then(fData => {
+                                        if (fData && !fData.error && fData.id) {
+                                            addFileToSourceList(fData.file_name || fData.name, fData.id, fData.location);
+                                            // availableFiles에도 추가하여 중복 방지
+                                            if (!availableFiles.some(f => f.id === fData.id)) {
+                                                availableFiles.push({
+                                                    id: fData.id,
+                                                    name: fData.file_name || fData.name,
+                                                    userId: fData.userId,
+                                                    location: fData.location
+                                                });
+                                            }
+                                        }
+                                    }).catch(e => console.error('Missing file fetch failed:', e));
                             }
                         });
-
-                        // 존재하지 않는 파일 ID가 발견되면 서버 정보 업데이트 (데이터 정합성 유지)
-                        if (missingFound) {
-                            console.log('유효하지 않은 첨부파일 ID를 정리합니다...');
-                            currentCompanyData.attachments = validAttachments;
-                            const cleanupPayload = {
-                                ...currentCompanyData,
-                                attachments: validAttachments,
-                                table: 'companies',
-                                action: 'update',
-                                userId: userId,
-                                updatedAt: new Date().toISOString()
-                            };
-                            APIcall(cleanupPayload).then(res => res.json()).then(console.log).catch(console.error);
-                        }
                     }
                 }
             })
@@ -163,7 +159,7 @@ $(document).ready(function () {
         $btn.prop('disabled', true).text('Saving...');
 
         // PUT 대신 POST를 사용하여 405 Method Not Allowed 에러 방지
-        APIcall(payload2, LAMBDA_URL, {
+        APIcall(payload2, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())
@@ -223,7 +219,7 @@ $(document).ready(function () {
                 if (companyId) {
                     try {
                         console.log("🔍 Searching Vector DB with Namespace (Company ID):", companyId);
-                        context = await searchVectorDB(userInput, companyId, LAMBDA_URL);
+                        context = await searchVectorDB(userInput, companyId, SUPABASE_ENDPOINT);
                         console.log("📄 RAG Search Result Length:", context.length);
                         if (context.length > 0) console.log("📄 First 100 chars of context:", context.substring(0, 100));
                     } catch (ragErr) {
@@ -711,7 +707,7 @@ $(document).ready(function () {
             action: 'upload'
         };
 
-        APIcall(payload3, LAMBDA_URL, {
+        APIcall(payload3, SUPABASE_ENDPOINT, {
             'Content-Type': 'application/json'
         })
             .then(response => response.json())
@@ -807,8 +803,8 @@ $(document).ready(function () {
 
                 // 두 요청을 병렬로 처리 (순서 상관 없음)
                 const [response, vectorResponse] = await Promise.all([
-                    APIcall(updatePayload, LAMBDA_URL, { 'Content-Type': 'application/json' }),
-                    APIcall(vectorDeletePayload, LAMBDA_URL, { 'Content-Type': 'application/json' })
+                    APIcall(updatePayload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }),
+                    APIcall(vectorDeletePayload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
                 ]);
                 const deleteResult = await response.json();
 
@@ -1001,7 +997,7 @@ $(document).ready(function () {
                             file_name: fileData.name,
                             vectorNamespace: companyId,
                             userId: userId
-                        }, LAMBDA_URL, {
+                        }, SUPABASE_ENDPOINT, {
                             'Content-Type': 'application/json'
                         });
 
@@ -1035,7 +1031,7 @@ $(document).ready(function () {
                 action: 'update'
             };
 
-            const response = await APIcall(payload, LAMBDA_URL, {
+            const response = await APIcall(payload, SUPABASE_ENDPOINT, {
                 'Content-Type': 'application/json'
             });
             await response.json();
@@ -1117,7 +1113,6 @@ $(document).ready(function () {
                 $newItem.find('.source-name').text(`${file.name} (업로드 중...)`);
 
                 try {
-                    // 4. 통합 Lambda 호출 (fileUpload 내에서 fetch 수행)
                     // cleanText를 전달하여 불필요한 재추출 방지
                     const fetchResponse = await fileUpload(file, userId, companyId, cleanText);
 
@@ -1137,7 +1132,8 @@ $(document).ready(function () {
 
                         // 5. 업로드 중 표시 제거 후 새로운 파일 아이템으로 교체
                         $newItem.remove();
-                        const newFileId = finalData.id || result.id;
+                        const newFileId = finalData[0].id || result.id;
+                        console.log('New File ID:', newFileId);
                         addFileToSourceList(file.name, newFileId, finalData.location || result.location);
 
                         // [중요] 회사 정보의 attachments 업데이트
@@ -1150,12 +1146,12 @@ $(document).ready(function () {
                                 // 서버 업데이트 (비동기)
                                 const updatePayload = {
                                     ...currentCompanyData,
-                                    attachments: newAttachments,
                                     table: 'companies',
                                     userId: userId,
                                     updatedAt: new Date().toISOString(),
                                     action: 'update'
                                 };
+                                console.log('Update Payload:', updatePayload);
                                 APIcall(updatePayload).then(res => res.json()).then(console.log).catch(console.error);
                             }
                         }

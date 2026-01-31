@@ -115,12 +115,12 @@ $(document).ready(function () {
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        console.error('Lambda Error:', data.error);
+                        console.error('API Error:', data.error);
                         params.failCallback();
                         return;
                     }
 
-                    // Lambda가 { Items: [], Count: 0 } 형태 또는 [] 형태 중 무엇을 반환하든 대응
+                    // API 응답 형식 대응
                     const rows = Array.isArray(data) ? data : (data.Items || []);
                     params.successCallback(rows, rows.length || (data.Count || 0));
                 })
@@ -346,7 +346,7 @@ $(document).ready(function () {
             const fetchResponse = await fileUpload(file, userId, '');
             const result = await fetchResponse.json();
 
-            // Lambda Proxy 응답 대응
+            // Proxy 응답 대응
             let finalData = result;
             if (result.body && typeof result.body === 'string') {
                 finalData = JSON.parse(result.body);

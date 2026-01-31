@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS "public"."buyers" (
     "investment_amount" "text",
     "etc" "text",
     "userId" "text",
-    "createdAt" timestamp with time zone DEFAULT "now"(),
-    "updatedAt" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS "public"."companies" (
     "summary" "text",
     "attachments" "jsonb" DEFAULT '[]'::"jsonb",
     "userId" "text",
-    "createdAt" timestamp with time zone DEFAULT "now"(),
-    "updatedAt" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -127,7 +127,8 @@ CREATE TABLE IF NOT EXISTS "public"."sellers" (
     "share_files" "jsonb" DEFAULT '[]'::"jsonb",
     "share_type" "text",
     "share_with" "jsonb" DEFAULT '[]'::"jsonb",
-    "updatedAt" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 

@@ -7,9 +7,22 @@ const AI_HANDLER = window.config.supabase.aiHandlerUrl;
 export function addAiResponse(userInput, sourceTexts) {
     const AI_ENDPOINT = AI_HANDLER;
 
-    // 토큰 제한 설정 (Lambda 타임아웃 및 페이로드 제한을 고려하여 30k 정도로 제한)
-    const MAX_TOKEN = 120000;
-    const SAFETY_MARGIN = 5000; // 프롬프트 템플릿과 사용자 입력을 위한 여유 공간
+    // Get model configuration dynamically
+    const modelConfig = window.config.ai.tokenLimits[window.config.ai.model];
+    if (!modelConfig) {
+        console.error(`Model '${window.config.ai.model}' not found in config. Using default limits.`);
+        // Fallback to safe defaults
+        modelConfig = {
+            maxContextTokens: 120000,
+            maxOutputTokens: 4096,
+            safetyMargin: 5000
+        };
+    }
+
+    const MAX_TOKEN = modelConfig.maxContextTokens;
+    const SAFETY_MARGIN = modelConfig.safetyMargin;
+
+    console.log(`🤖 Using model: ${window.config.ai.model} (Max: ${MAX_TOKEN} tokens, Margin: ${SAFETY_MARGIN})`);
 
     let truncatedSource = sourceTexts || "";
 
@@ -69,14 +82,14 @@ export async function searchVectorDB(query, companyId) {
         const response = await APIcall(payload, AI_HANDLER, { 'Content-Type': 'application/json' });
         const data = await response.json();
 
-        // Lambda 응답 구조에 따라 처리 (문자열 배열 가정)
+        // API 응답 구조에 따라 처리 (문자열 배열 가정)
         // data.results가 배열이라고 가정하고 연결
         if (data.results && Array.isArray(data.results)) {
             return data.results.join("\n\n");
         } else if (typeof data.results === 'string') {
             return data.results;
         } else if (data.body) {
-            // Lambda Proxy Integration의 경우 body 파싱
+            // Proxy Integration의 경우 body 파싱
             try {
                 const body = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
                 if (Array.isArray(body.results)) return body.results.join("\n\n");

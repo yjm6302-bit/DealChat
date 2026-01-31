@@ -28,6 +28,7 @@ $(document).ready(function () {
             .then(response => response.json())
             .then(data => {
                 const item = Array.isArray(data) ? data[0] : data;
+                console.log(item);
                 if (item) {
                     $('#seller-id').val(item.id);
                     $('#companyName').val(item.companyName);
@@ -37,8 +38,19 @@ $(document).ready(function () {
                     $('#sale_price').val(item.sale_price);
                     $('#userId').val(item.userId);
                     $('#others').val(item.others);
+                    $('#created_at').val(item.created_at);
+                    $('#updated_at').val(item.updated_at);
 
-                    // 공유 설정 및 태그 처리 로직 (생략된 경우 기존 로직 참고하여 복원 가능)
+                    // 공유 설정 (share_type) 라디오 버튼 매칭
+                    if (item.share_type) {
+                        $(`input[name="share_type"][value="${item.share_type}"]`).prop('checked', true);
+                    }
+
+                    // 공유 대상 (share_with) 처리
+                    if (item.share_with && Array.isArray(item.share_with)) {
+                        // share_with 데이터가 있으면 체크박스나 선택 UI에 반영
+                        // 예: item.share_with.forEach(id => $(`#share-target-${id}`).prop('checked', true));
+                    }
                 }
             })
             .catch(err => console.error('Data Load Error:', err));
@@ -55,6 +67,9 @@ $(document).ready(function () {
             sale_price: $('#sale_price').val(),
             userId: $('#userId').val(),
             others: $('#others').val(),
+            share_type: $('input[name="share_type"]:checked').val(),
+            share_with: [], // 공유 대상 선택 로직 추가 필요 시 여기에 배열 추가
+            updated_at: new Date().toISOString(),
             table: 'sellers',
             action: 'update'
         };

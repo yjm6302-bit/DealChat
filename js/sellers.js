@@ -8,7 +8,43 @@ const columnDefs = [
     { field: "companyName", headerName: "매도자명", sortable: true, filter: true, flex: 1 },
     { field: "industry", headerName: "산업", sortable: true, filter: true, flex: 1 },
     { field: "sale_price", headerName: "가격(억원)", sortable: true, filter: true, flex: 1 },
-    { field: "summary", headerName: "요약", sortable: true, filter: true, flex: 2.5 }
+    { field: "summary", headerName: "요약", sortable: true, filter: true, flex: 2.5 },
+    {
+        field: "created_at",
+        headerName: "등록일",
+        sortable: true,
+        filter: true,
+        flex: 1,
+        valueFormatter: params => {
+            if (!params.value) return '';
+            const date = new Date(params.value);
+            return date.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    },
+    {
+        field: "updated_at",
+        headerName: "수정일",
+        sortable: true,
+        filter: true,
+        flex: 1,
+        valueFormatter: params => {
+            if (!params.value) return '';
+            const date = new Date(params.value);
+            return date.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
 ];
 
 const gridOptions = {
@@ -59,7 +95,7 @@ $(document).ready(function () {
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        console.error('Lambda Error:', data.error);
+                        console.error('API Error:', data.error);
                         params.failCallback();
                         return;
                     }

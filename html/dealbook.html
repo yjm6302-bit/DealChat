@@ -94,6 +94,10 @@
                     </div>
                 </div>
                 <div class="top-actions">
+                    <button class="btn-secondary" onclick="location.href='./companies.html'">
+                        <span class="material-symbols-outlined">list</span>
+                        목록으로
+                    </button>
                     <button class="btn-secondary" id="btn-register-deal">
                         <span class="material-symbols-outlined">share</span>
                         매물등록
@@ -144,15 +148,19 @@
                 </button>
             </div>
             <div class="panel-content" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
-                <div class="guide-section">
+                <div class="guide-section" style="margin-bottom: 8px; padding-bottom: 0;">
                     <button class="btn-new-source" id="add-source">
                         <span class="material-symbols-outlined">add</span>
                         <span>소스 추가</span>
                     </button>
                     <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
                 </div>
-                <div class="nav-section">
-                    <ul class="source-list" id="source-list">
+
+
+                <!-- File List Card -->
+                <div class="file-list-card"
+                    style="margin: 0 12px; background: white; border: 1px solid var(--border-color); border-radius: 12px; max-height: 500px; overflow-y: auto;">
+                    <ul class="source-list" id="source-list" style="margin: 0; padding: 0; list-style: none;">
                         <!-- Uploaded files will appear here -->
                     </ul>
                 </div>

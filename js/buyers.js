@@ -61,7 +61,7 @@ $(document).ready(function () {
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        console.error('Lambda Error:', data.error);
+                        console.error('API Error:', data.error);
                         params.failCallback();
                         return;
                     }

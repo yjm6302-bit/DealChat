@@ -48,6 +48,39 @@ $(document).ready(function () {
             .trim();
     }
 
+    // Conversation History Management
+    const MAX_HISTORY_LENGTH = 20; // Maximum messages to keep (10 exchanges)
+    let conversationHistory = []; // Array of {role: 'user' | 'assistant', content: string, timestamp: string}
+
+    // Add message to conversation history
+    function addToHistory(role, content) {
+        conversationHistory.push({
+            role: role,
+            content: content,
+            timestamp: new Date().toISOString()
+        });
+
+        // Keep only recent messages (circular buffer)
+        if (conversationHistory.length > MAX_HISTORY_LENGTH) {
+            conversationHistory = conversationHistory.slice(-MAX_HISTORY_LENGTH);
+        }
+
+        console.log(`📜 History updated: ${conversationHistory.length} messages stored`);
+    }
+
+    // Format history for LLM prompt
+    function formatHistoryForPrompt(history) {
+        if (!history || history.length === 0) return "";
+
+        let formatted = "[Conversation History]\n";
+        history.forEach(msg => {
+            const label = msg.role === 'user' ? 'User' : 'Assistant';
+            formatted += `${label}: ${msg.content}\n\n`;
+        });
+        return formatted + "\n";
+    }
+
+
     // 0. 가용 파일 목록(files) 불러오기
     function loadAvailableFiles() {
         return APIcall({
@@ -167,7 +200,7 @@ $(document).ready(function () {
             industry: updatedIndustry,
             table: 'companies',
             userId: userId,
-            updatedAt: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             action: 'update' // 기존 데이터 업데이트
         };
 
@@ -226,6 +259,7 @@ $(document).ready(function () {
 
             // User Message
             addMessage(userInput, 'user');
+            addToHistory('user', userInput); // Store in history
             $chatInput.val('').css('height', 'auto');
 
             // AI Response (RAG -> LLM 구조)
@@ -262,17 +296,28 @@ $(document).ready(function () {
                     console.warn("⚠️ No Company ID found. Skipping Vector Search.");
                 }
 
-                // 3. 전체 컨텍스트 결합 (회사 기본 정보 + RAG 검색 결과)
-                const fullContext = companyInfo + (ragContext ? "\n=== 관련 문서 내용 ===\n" + ragContext : "");
-                console.log("📦 Total Context Length:", fullContext.length);
+                // 3. 대화 히스토리 포맷팅 (현재 메시지 제외)
+                const historyForPrompt = formatHistoryForPrompt(
+                    conversationHistory.slice(0, -1) // Exclude current user message
+                );
 
-                // 4. 결합된 컨텍스트와 함께 AI 응답 생성 요청
+                // 4. 전체 컨텍스트 결합 (회사 기본 정보 + 대화 히스토리 + RAG 검색 결과)
+                const fullContext = companyInfo + historyForPrompt + (ragContext ? "\n=== 관련 문서 내용 ===\n" + ragContext : "");
+                console.log("📦 Total Context Length:", fullContext.length);
+                console.log("📜 Conversation History Length:", conversationHistory.length);
+
+                // 5. 결합된 컨텍스트와 함께 AI 응답 생성 요청
                 const response = await addAiResponse(userInput, fullContext);
                 const data = await response.json();
-                addMessage(data.answer, 'ai');
+                const aiAnswer = data.answer;
+
+                addMessage(aiAnswer, 'ai');
+                addToHistory('assistant', aiAnswer); // Store AI response in history
             } catch (error) {
                 console.error('AI Response Error:', error);
-                addMessage('죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.', 'ai');
+                const errorMsg = '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.';
+                addMessage(errorMsg, 'ai');
+                addToHistory('assistant', errorMsg); // Store error in history too
             } finally {
                 isSending = false; // 전송 완료 (성공/실패 상관없이 해제)
             }
@@ -527,7 +572,7 @@ $(document).ready(function () {
         $btn.prop('disabled', true).html('<span class="material-symbols-outlined spin" style="font-size: 18px;">sync</span> 생성 중...');
 
         try {
-            // Lambda를 통해 AI 응답 생성 (보안 및 일관성을 위해 직접 호출 대신 Lambda 사용)
+            // AI 응답 생성 (보안 및 일관성을 위해 Edge Function 사용)
             const prompt = `[Report Type] ${reportType}\n[Language] ${language}\n[Instruction] ${instruction}`;
 
             const response = await addAiResponse(prompt, getRAGdata());
@@ -721,6 +766,7 @@ $(document).ready(function () {
 
     // 등록하기 버튼 클릭
     $('#save-deal').on('click', function () {
+        const now = new Date().toISOString();
         const formData = {
             companyId: companyId,
             companyName: $('input[name="company_name"]').val(),
@@ -733,14 +779,15 @@ $(document).ready(function () {
             share_files: selectedSharedFiles,
             share_type: $('input[name="share_type"]:checked').val(),
             share_with: selectedShareTargets,
-            updatedAt: new Date().toISOString()
+            created_at: now,
+            updated_at: now
         };
 
         const $btn = $(this);
         const originalText = $btn.text();
         $btn.prop('disabled', true).text('등록 중...');
 
-        // Lambda Payload 구성
+        // Payload 구성
         const payload3 = {
             ...formData,
             table: 'sellers',
@@ -828,7 +875,7 @@ $(document).ready(function () {
                     table: 'companies',
                     action: 'update',
                     userId: userId,
-                    updatedAt: new Date().toISOString()
+                    updated_at: new Date().toISOString()
                 };
 
                 // [추가] Vector DB에서 해당 파일의 임베딩 데이터 삭제 요청
@@ -959,7 +1006,7 @@ $(document).ready(function () {
             const result = await fetchResponse.json();
             console.log("Text file upload response:", result);
 
-            // Lambda Proxy 응답 대응
+            // Proxy 응답 대응
             let finalData = result;
             if (result.body && typeof result.body === 'string') {
                 finalData = JSON.parse(result.body);
@@ -987,7 +1034,7 @@ $(document).ready(function () {
                             ...currentCompanyData,
                             table: 'companies',
                             userId: userId,
-                            updatedAt: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
                             action: 'update'
                         };
                         await APIcall(updatePayload, SUPABASE_ENDPOINT, {
@@ -1142,7 +1189,7 @@ $(document).ready(function () {
                         // (이미 존재하는 파일이므로 files 테이블 추가 없이 Vector 생성만 유도함)
                         await APIcall({
                             action: 'index_existing',
-                            table: 'companies', // Lambda requires a table, but index_existing logic handles document_sections
+                            table: 'companies', // Edge Function에서 table 필요, index_existing 로직이 document_sections 처리
                             parsedText: sanitizedText,
                             fileId: fileData.id,
                             file_name: fileData.name,
@@ -1178,7 +1225,7 @@ $(document).ready(function () {
                 attachments: newAttachments,
                 table: 'companies',
                 userId: userId,
-                updatedAt: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
                 action: 'update'
             };
 
@@ -1275,13 +1322,13 @@ $(document).ready(function () {
                     const result = await fetchResponse.json();
                     console.log("Server Response Data:", result);
 
-                    // Lambda Proxy 응답 대응 (body가 문자열인 경우 재파싱)
+                    // Proxy 응답 대응 (body가 문자열인 경우 재파싱)
                     let finalData = result;
                     if (result.body && typeof result.body === 'string') {
                         finalData = JSON.parse(result.body);
                     }
 
-                    // 성공 조건 판단 (HTTP 200 또는 Lambda 성공 메시지)
+                    // 성공 조건 판단 (HTTP 200 또는 성공 메시지)
                     if (fetchResponse.ok || finalData.statusCode == 200 || finalData.message === "Upload Success" || finalData.id) {
                         console.log('Upload Success:', finalData);
 
@@ -1303,7 +1350,7 @@ $(document).ready(function () {
                                     ...currentCompanyData,
                                     table: 'companies',
                                     userId: userId,
-                                    updatedAt: new Date().toISOString(),
+                                    updated_at: new Date().toISOString(),
                                     action: 'update'
                                 };
                                 console.log('Update Payload:', updatePayload);

@@ -149,13 +149,16 @@ $(document).ready(function () {
             return;
         }
 
+        const now = new Date().toISOString();
         const payload = {
             companyName: companyName,
             industry: industry,
             summary: summary,
             table: 'companies',
             action: 'upload',
-            userId: userId
+            userId: userId,
+            created_at: now,
+            updated_at: now
         };
 
         const $btn = $(this);

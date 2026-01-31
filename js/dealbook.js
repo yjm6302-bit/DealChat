@@ -31,6 +31,23 @@ $(document).ready(function () {
     const $chatMessages = $('#chat-messages');
     const $welcomeScreen = $('.welcome-screen');
     const $guidePanel = $('#guide-panel');
+
+    // Helper function: JSON 직렬화 시 문제가 되는 문자 제거
+    function sanitizeTextForJSON(text) {
+        if (!text) return "";
+
+        return text
+            // 제어 문자 제거 (탭, 줄바꿈, 캐리지 리턴 제외)
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+            // 잘못된 유니코드 이스케이프 시퀀스 제거
+            .replace(/\\u(?![0-9a-fA-F]{4})/g, '')
+            // NULL 문자 제거
+            .replace(/\0/g, '')
+            // 기타 문제가 될 수 있는 특수 문자 정규화
+            .replace(/[\uFFFD\uFFFE\uFFFF]/g, '') // Replacement character 제거
+            .trim();
+    }
+
     // 0. 가용 파일 목록(files) 불러오기
     function loadAvailableFiles() {
         return APIcall({
@@ -213,24 +230,44 @@ $(document).ready(function () {
 
             // AI Response (RAG -> LLM 구조)
             try {
-                // 1. Vector DB에서 관련 정보 검색 (RAG)
-                // companyId는 상위 스코프에 정의되어 있음
-                let context = "";
+                // 1. 회사 기본 정보 수집 (Summary, Industry, Company Name)
+                let companyInfo = "";
+                if (currentCompanyData) {
+                    const companyName = currentCompanyData.companyName || $('.notebook-title').text() || "회사명 없음";
+                    const summary = currentCompanyData.summary || $('#summary').val() || "";
+                    const industry = currentCompanyData.industry || $('#industry').val() || "";
+
+                    if (companyName || summary || industry) {
+                        companyInfo = "=== 회사 기본 정보 ===\n";
+                        if (companyName) companyInfo += `회사명: ${companyName}\n`;
+                        if (industry) companyInfo += `산업: ${industry}\n`;
+                        if (summary) companyInfo += `회사소개: ${summary}\n`;
+                        companyInfo += "\n";
+                        console.log("📋 Company Info Added to Context");
+                    }
+                }
+
+                // 2. Vector DB에서 관련 정보 검색 (RAG)
+                let ragContext = "";
                 if (companyId) {
                     try {
                         console.log("🔍 Searching Vector DB with Namespace (Company ID):", companyId);
-                        context = await searchVectorDB(userInput, companyId, SUPABASE_ENDPOINT);
-                        console.log("📄 RAG Search Result Length:", context.length);
-                        if (context.length > 0) console.log("📄 First 100 chars of context:", context.substring(0, 100));
+                        ragContext = await searchVectorDB(userInput, companyId, SUPABASE_ENDPOINT);
+                        console.log("📄 RAG Search Result Length:", ragContext.length);
+                        if (ragContext.length > 0) console.log("📄 First 100 chars of RAG context:", ragContext.substring(0, 100));
                     } catch (ragErr) {
-                        console.warn("RAG Search failed, proceeding without context:", ragErr);
+                        console.warn("RAG Search failed, proceeding without RAG context:", ragErr);
                     }
                 } else {
                     console.warn("⚠️ No Company ID found. Skipping Vector Search.");
                 }
 
-                // 2. 검색된 컨텍스트와 함께 AI 응답 생성 요청
-                const response = await addAiResponse(userInput, context);
+                // 3. 전체 컨텍스트 결합 (회사 기본 정보 + RAG 검색 결과)
+                const fullContext = companyInfo + (ragContext ? "\n=== 관련 문서 내용 ===\n" + ragContext : "");
+                console.log("📦 Total Context Length:", fullContext.length);
+
+                // 4. 결합된 컨텍스트와 함께 AI 응답 생성 요청
+                const response = await addAiResponse(userInput, fullContext);
                 const data = await response.json();
                 addMessage(data.answer, 'ai');
             } catch (error) {
@@ -468,6 +505,9 @@ $(document).ready(function () {
             $internalFileModal.hide();
             selectedInternalFiles = [];
             updateSelectedCount();
+        }
+        if ($(e.target).is($textInputModal)) {
+            $textInputModal.hide();
         }
     });
 
@@ -842,6 +882,7 @@ $(document).ready(function () {
     // --- Source Add Modals Logic ---
     const $sourceOptionModal = $('#source-option-modal');
     const $internalFileModal = $('#internal-file-modal');
+    const $textInputModal = $('#text-input-modal');
     let selectedInternalFiles = []; // Array of file objects [{id, name, location}]
 
     $('#add-source').on('click', function () {
@@ -863,6 +904,114 @@ $(document).ready(function () {
         renderInternalFileList();
         $internalFileModal.css('display', 'flex');
     });
+
+
+    // Text Input Modal Logic
+
+    $('#btn-input-text').on('click', function () {
+        $sourceOptionModal.hide();
+        // 모달 필드 초기화
+        $('#text-input-filename').val('');
+        $('#text-input-content').val('');
+        $textInputModal.css('display', 'flex');
+    });
+
+    $('#close-text-input-modal, #cancel-text-input').on('click', function () {
+        $textInputModal.hide();
+    });
+
+    $('#save-text-input').on('click', async function () {
+        const filename = $('#text-input-filename').val().trim();
+        const content = $('#text-input-content').val().trim();
+
+        // 유효성 검사
+        if (!filename) {
+            alert('파일명을 입력해주세요.');
+            $('#text-input-filename').focus();
+            return;
+        }
+
+        if (!content) {
+            alert('내용을 입력해주세요.');
+            $('#text-input-content').focus();
+            return;
+        }
+
+        // 파일명에 확장자가 없으면 .txt 추가
+        const finalFilename = filename.includes('.') ? filename : filename + '.txt';
+
+        const $btn = $(this);
+        const originalText = $btn.text();
+        $btn.prop('disabled', true).text('저장 중...');
+
+        try {
+            // 1. 텍스트 정제 (JSON 직렬화 문제 방지)
+            const sanitizedContent = sanitizeTextForJSON(content);
+            console.log(`Text input sanitized - Original: ${content.length}, Sanitized: ${sanitizedContent.length}`);
+
+            // 2. 텍스트를 Blob으로 변환하여 File 객체 생성
+            const blob = new Blob([sanitizedContent], { type: 'text/plain' });
+            const file = new File([blob], finalFilename, { type: 'text/plain' });
+
+            // 3. 파일 업로드 (기존 fileUpload 함수 사용)
+            console.log('Uploading text file:', finalFilename);
+            const fetchResponse = await fileUpload(file, userId, companyId, sanitizedContent);
+            const result = await fetchResponse.json();
+            console.log("Text file upload response:", result);
+
+            // Lambda Proxy 응답 대응
+            let finalData = result;
+            if (result.body && typeof result.body === 'string') {
+                finalData = JSON.parse(result.body);
+            }
+
+            // 성공 조건 판단
+            if (fetchResponse.ok || finalData.statusCode == 200 || finalData.message === "Upload Success" || finalData.id) {
+                console.log('Text file upload success:', finalData);
+
+                const newFileId = finalData[0]?.id || result.id;
+                const fileLocation = finalData[0]?.location || result.location;
+
+                // 3. UI에 파일 추가
+                addFileToSourceList(finalFilename, newFileId, fileLocation);
+
+                // 4. 회사 정보의 attachments 업데이트
+                if (currentCompanyData && newFileId) {
+                    const currentAttachments = currentCompanyData.attachments || [];
+                    if (!currentAttachments.includes(newFileId)) {
+                        const newAttachments = [...currentAttachments, newFileId];
+                        currentCompanyData.attachments = newAttachments;
+
+                        // 서버 업데이트
+                        const updatePayload = {
+                            ...currentCompanyData,
+                            table: 'companies',
+                            userId: userId,
+                            updatedAt: new Date().toISOString(),
+                            action: 'update'
+                        };
+                        await APIcall(updatePayload, SUPABASE_ENDPOINT, {
+                            'Content-Type': 'application/json'
+                        });
+                    }
+                }
+
+                // 5. 가용 파일 목록 새로고침
+                await loadAvailableFiles();
+
+                alert('텍스트 파일이 저장되고 벡터 DB에 등록되었습니다.');
+                $textInputModal.hide();
+            } else {
+                throw new Error(finalData.message || finalData.error || '서버 응답 오류');
+            }
+        } catch (error) {
+            console.error('Text file save error:', error);
+            alert('텍스트 저장 중 오류가 발생했습니다: ' + error.message);
+        } finally {
+            $btn.prop('disabled', false).text(originalText);
+        }
+    });
+
 
     $('#close-internal-file-modal, #cancel-internal-selection').on('click', function () {
         $internalFileModal.hide();
@@ -985,14 +1134,16 @@ $(document).ready(function () {
                         console.warn(`Skipping VectorDB registration for ${file.name}: ${validation.msg}`);
                         // 텍스트 추출 실패해도 파일 연결은 진행할지 여부 결정. 여기서는 일단 연결은 진행.
                     } else {
-                        // 6. VectorDB 등록을 위해 새로운 index_existing 액션 사용
-                        // (이미 존재하는 파일이므로 files 테이블 추가 없이 Vector 생성만 유도함)
-                        console.log(`Registering to VectorDB (Index Only): ${fileData.name}, Text Length: ${extractedText.length}`);
+                        // 6. 텍스트 정제 (JSON 직렬화 문제 방지)
+                        const sanitizedText = sanitizeTextForJSON(extractedText);
+                        console.log(`Registering to VectorDB (Index Only): ${fileData.name}, Original Length: ${extractedText.length}, Sanitized Length: ${sanitizedText.length}`);
 
+                        // 7. VectorDB 등록을 위해 새로운 index_existing 액션 사용
+                        // (이미 존재하는 파일이므로 files 테이블 추가 없이 Vector 생성만 유도함)
                         await APIcall({
                             action: 'index_existing',
                             table: 'companies', // Lambda requires a table, but index_existing logic handles document_sections
-                            parsedText: extractedText,
+                            parsedText: sanitizedText,
                             fileId: fileData.id,
                             file_name: fileData.name,
                             vectorNamespace: companyId,
@@ -1109,12 +1260,16 @@ $(document).ready(function () {
 
                 console.log('텍스트 추출 완료:', cleanText.substring(0, 100) + '...');
 
+                // 텍스트 정제 (JSON 직렬화 문제 방지)
+                const sanitizedText = sanitizeTextForJSON(cleanText);
+                console.log(`Text sanitized - Original: ${cleanText.length}, Sanitized: ${sanitizedText.length}`);
+
                 // 업로드 상태 업데이트
                 $newItem.find('.source-name').text(`${file.name} (업로드 중...)`);
 
                 try {
-                    // cleanText를 전달하여 불필요한 재추출 방지
-                    const fetchResponse = await fileUpload(file, userId, companyId, cleanText);
+                    // sanitizedText를 전달하여 불필요한 재추출 방지 및 JSON 오류 방지
+                    const fetchResponse = await fileUpload(file, userId, companyId, sanitizedText);
 
                     // [핵심] fetch 결과인 Response 객체에서 JSON 데이터를 읽어옴
                     const result = await fetchResponse.json();

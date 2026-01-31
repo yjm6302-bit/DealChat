@@ -631,6 +631,14 @@
                         <span style="font-size: 12px; color: var(--text-secondary);">이미 업로드된 내 파일 목록에서 선택</span>
                     </div>
                 </button>
+                <button class="btn btn-outline-primary w-100 d-flex align-items-center gap-3 p-3" id="btn-input-text"
+                    style="border-radius: 12px; text-align: left; transition: all 0.2s;">
+                    <span class="material-symbols-outlined" style="font-size: 24px;">edit_note</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: 600; font-size: 15px;">텍스트 직접 입력</span>
+                        <span style="font-size: 12px; color: var(--text-secondary);">텍스트를 입력하여 파일로 저장</span>
+                    </div>
+                </button>
             </div>
         </div>
     </div>
@@ -665,6 +673,45 @@
                     style="border-radius: 20px; padding: 8px 20px;">취소</button>
                 <button class="btn btn-primary" id="confirm-internal-select"
                     style="border-radius: 20px; padding: 8px 25px;">추가하기 (<span id="selected-count">0</span>)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Input Modal -->
+    <div id="text-input-modal" class="modal-overlay">
+        <div class="modal-content-large" style="max-width: 700px; height: 80vh;">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-size: 18px;">텍스트 직접 입력</h3>
+                <button class="btn-close" id="close-text-input-modal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="flex-direction: column; padding: 24px; gap: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-weight: 600; font-size: 14px;">파일명</label>
+                    <input type="text" id="text-input-filename" class="form-control"
+                        placeholder="파일명을 입력하세요 (예: 회사소개.txt)"
+                        style="padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; outline: none;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                    <label style="font-weight: 600; font-size: 14px;">내용</label>
+                    <textarea id="text-input-content" class="form-control" placeholder="텍스트 내용을 입력하세요..."
+                        style="flex: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; outline: none; resize: none; font-family: inherit; line-height: 1.6;"></textarea>
+                </div>
+                <div
+                    style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                    <span class="material-symbols-outlined"
+                        style="color: var(--text-secondary); font-size: 20px;">info</span>
+                    <span style="font-size: 13px; color: var(--text-secondary);">입력한 텍스트는 서버에 파일로 저장되고 벡터 DB에도
+                        저장됩니다.</span>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn btn-secondary" id="cancel-text-input"
+                    style="border-radius: 20px; padding: 8px 20px;">취소</button>
+                <button class="btn btn-primary" id="save-text-input"
+                    style="border-radius: 20px; padding: 8px 25px;">저장하기</button>
             </div>
         </div>
     </div>

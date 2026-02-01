@@ -84,7 +84,7 @@ serve(async (req) => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
+                model: "gpt-5-nano",
                 messages: [
                     { role: "system", content: "You are a professional assistant." },
                     { role: "user", content: userPrompt }

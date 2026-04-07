@@ -10,10 +10,12 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <link rel="icon" type="image/png" href="../../img/dealchat-favicon.png">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <!-- AG Grid -->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css');
         @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css');
@@ -305,6 +307,12 @@
             width: 100%;
         }
 
+        .chart-preset.active-preset {
+            background: var(--primary-color) !important;
+            color: #fff !important;
+            border-color: var(--primary-color) !important;
+        }
+
         @media (max-width: 1200px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -326,63 +334,56 @@
 
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-        <div class="brand">
+        <div class="brand" data-page="dashboard" style="cursor: pointer;">
             :DEALCHAT <span class="badge">ADMIN</span>
         </div>
 
         <div class="menu">
-            <li class="menu-item">
-                <a class="menu-link active" data-page="dashboard">
-                    <span class="material-symbols-outlined icon">dashboard</span>
-                    <div>Dashboard</div>
-                </a>
-            </li>
-
             <div class="menu-header">MANAGEMENT</div>
 
             <li class="menu-item">
                 <a class="menu-link" data-page="users">
                     <span class="material-symbols-outlined icon">group</span>
-                    <div>회원 관리 (Users)</div>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a class="menu-link" data-page="companies">
-                    <span class="material-symbols-outlined icon">business</span>
-                    <div>기업 관리 (Companies)</div>
+                    <div>회원 관리</div>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-page="files">
                     <span class="material-symbols-outlined icon">description</span>
-                    <div>파일 관리 (Files)</div>
+                    <div>파일 관리</div>
                 </a>
             </li>
             <li class="menu-item">
-                <a class="menu-link" data-page="reports">
-                    <span class="material-symbols-outlined icon">auto_awesome_motion</span>
-                    <div>보고서 설정 (Reports)</div>
+                <a class="menu-link" data-page="nda">
+                    <span class="material-symbols-outlined icon">gavel</span>
+                    <div>NDA 관리</div>
                 </a>
             </li>
-
-            <div class="menu-header">INQUIRY & CONTENT</div>
-
             <li class="menu-item">
                 <a class="menu-link" data-page="qna">
                     <span class="material-symbols-outlined icon">support_agent</span>
-                    <div>상담 문의 (Q&A)</div>
+                    <div>Q&A 관리</div>
+                </a>
+            </li>
+
+            <div class="menu-header">CONTENTS</div>
+
+            <li class="menu-item">
+                <a class="menu-link" data-page="companies">
+                    <span class="material-symbols-outlined icon">business</span>
+                    <div>기업 관리</div>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-page="sellers">
                     <span class="material-symbols-outlined icon">storefront</span>
-                    <div>매도 매물 (Sellers)</div>
+                    <div>매도 관리</div>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-page="buyers">
                     <span class="material-symbols-outlined icon">shopping_bag</span>
-                    <div>매수 희망 (Buyers)</div>
+                    <div>매수 관리</div>
                 </a>
             </li>
         </div>
@@ -449,11 +450,11 @@
                 </div>
             </div>
 
-            <!-- Recent Activity Table (Placeholder) -->
-            <div class="card">
-                <h5 class="card-header">Recent Users</h5>
-                <div style="padding: 0 20px 20px;">
-                    <p style="color: #888;">최근 가입한 회원 목록을 표시합니다.</p>
+            <!-- Weekly Chart Placeholder -->
+            <div class="card" style="padding: 20px; height: 350px;">
+                <h5 style="margin: 0 0 16px;">Weekly Trend</h5>
+                <div style="height: calc(100% - 40px); position: relative;">
+                    <canvas id="weekly-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -473,13 +474,87 @@
             <div id="modal-content" style="padding: 24px; overflow-y: auto;">
                 <!-- Dynamic Content -->
             </div>
-            <div style="padding: 16px 24px; border-top: 1px solid #d9dee3; text-align: right;">
-                <button class="btn-sm btn-primary" onclick="$('#detail-modal').fadeOut(200)">Close</button>
+            <div id="modal-footer" style="padding: 16px 24px; border-top: 1px solid #d9dee3; display:flex; justify-content:space-between; align-items:center;">
+                <div id="modal-footer-left"></div>
+                <button class="btn-sm btn-primary" onclick="$('#detail-modal').fadeOut(200)">닫기</button>
             </div>
         </div>
     </div>
 
+    <!-- PDF 생성용 숨김 템플릿 -->
+    <div id="nda-pdf-template" style="display: none;">
+        <div style="padding: 70px 60px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.5; max-width: 800px; margin: 0 auto; background: #fff; height: 1020px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
+            <div style="text-align: center; margin-bottom: 35px; border-bottom: 2px solid #696cff; padding-bottom: 15px;">
+                <h1 style="font-size: 26px; font-weight: 800; margin-bottom: 5px; letter-spacing: 10px; margin-left: 10px;">비밀유지확약서</h1>
+                <p style="color: #64748b; font-size: 11px; margin: 0; letter-spacing: 2px;">NON-DISCLOSURE AGREEMENT</p>
+            </div>
+
+            <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr>
+                        <td style="padding: 5px 0; width: 110px; color: #64748b; font-weight: 600;">대상 정보명</td>
+                        <td id="pdf-item-name" style="padding: 5px 0; font-weight: 700; color: #1e293b;">-</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0; color: #64748b; font-weight: 600;">매물 유형</td>
+                        <td style="padding: 5px 0;">
+                            <span id="pdf-item-type" style="display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;">-</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="font-size: 13.5px;">
+                <p style="font-weight: 700; margin-bottom: 15px; font-size: 16px; color: #1e293b; border-left: 4px solid #696cff; padding-left: 12px;">정보 제공에 관한 비밀유지 의무</p>
+                <p style="margin-bottom: 25px; text-align: justify; line-height: 1.8;">본인은 'DealChat' 서비스를 통해 제공받는 관심 항목의 모든 정보(매칭 조건, 투자 성향, 기밀 검토 사항 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을 확약합니다.</p>
+
+                <div style="margin-bottom: 15px;">
+                    <p style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">제 1 조 (정보의 사용 목적 제한)</p>
+                    <p style="margin: 0; padding-left: 15px; text-align: justify;">제공받은 정보를 본 거래의 검토 목적 이외의 용도로 사용하지 아니하며, 어떠한 경우에도 사업적 기밀로 유지한다.</p>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <p style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">제 2 조 (제3자 누설 금지)</p>
+                    <p style="margin: 0; padding-left: 15px; text-align: justify;">정보의 내용 및 거래 진행 사실을 제3자에게 누설하거나 공개하지 아니한다. 단, 법령상 요구되거나 법원의 명령이 있는 경우는 예외로 한다.</p>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <p style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">제 3 조 (위반 시 책임 보상)</p>
+                    <p style="margin: 0; padding-left: 15px; text-align: justify;">본 확약 사항을 위반하여 상대방에게 손해가 발생할 경우, 모든 법적 책임을 부담하며 상대방이 입은 손해를 전액 배상한다.</p>
+                </div>
+            </div>
+
+            <div style="flex-grow: 2;"></div>
+
+            <p style="font-weight: 700; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 30px; font-size: 14px; line-height: 1.6; margin: 0; color: #1e293b;">
+                귀하(DealChat)로부터 제공받은 위의 내용을 충분히 숙지하였으며,<br>
+                신의성실의 원칙에 따라 동의하며 이를 확약합니다.
+            </p>
+
+            <div style="height: 80px;"></div>
+
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: #1e293b; margin: 0;">
+                <span style="color: #64748b; font-weight: 500;">확약인 (Signer)</span>
+                <div style="display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #696cff; padding: 0 15px; min-width: 140px; justify-content: center; position: relative; height: 36px;">
+                    <span id="pdf-signature-display" style="font-family: 'Inter', cursive; font-size: 24px; color: #1e293b;">-</span>
+                </div>
+                <span style="color: #64748b; font-size: 13px; font-weight: 500;">(직인생략)</span>
+            </div>
+
+            <div style="height: 150px;"></div>
+
+            <div style="text-align: center; color: #1e293b;">
+                <div style="font-size: 17px; font-weight: 700; margin-bottom: 10px;" id="pdf-signed-date">202X. XX. XX.</div>
+                <div style="font-size: 24px; font-weight: 800; letter-spacing: 3px;">딜챗 주식회사</div>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+        </div>
+    </div>
+
     <!-- Scripts -->
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../js/helpers.js"></script>

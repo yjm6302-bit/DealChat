@@ -50,18 +50,32 @@ $(document).ready(function () {
         name: (dbUser && dbUser.name) || user.user_metadata.name || '사용자',
         company: (dbUser && dbUser.company) || user.user_metadata.company || '',
         avatar: (dbUser && dbUser.avatar_url) || user.user_metadata.avatar_url || user.user_metadata.avatar || null,
+        status: (dbUser && dbUser.status) || 'pending',
+        role: (dbUser && dbUser.role) || 'reviewer',
         isLoggedIn: true
       };
+
+      // 3. 승인 상태 체크
+      if (userData.status === 'pending') {
+        alert('관리자의 가입 승인을 기다리는 중입니다. 승인 후 이용 가능합니다.');
+        await _supabase.auth.signOut();
+        return;
+      } else if (userData.status === 'rejected') {
+        alert('가입 승인이 거부되었습니다. 관리자에게 문의해 주세요.');
+        await _supabase.auth.signOut();
+        return;
+      }
 
       alert(`환영합니다, ${userData.name}님!`);
       localStorage.setItem('dealchat_users', JSON.stringify(userData));
       
       // 페이지 이동
       const currentPath = location.pathname;
-      if (currentPath.includes('/html/') || currentPath.endsWith('/html')) {
-        location.href = './index.html';
+      const isSubPage = currentPath.includes('/html/') || currentPath.endsWith('/html');
+      if (userData.role === 'buyer') {
+        location.href = isSubPage ? './total_sellers.html' : './html/total_sellers.html';
       } else {
-        location.href = './html/index.html';
+        location.href = isSubPage ? './index.html' : './html/index.html';
       }
 
     } catch (err) {

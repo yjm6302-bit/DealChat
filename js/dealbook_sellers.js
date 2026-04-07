@@ -58,6 +58,22 @@ $(document).ready(function () {
         initUserMenu();
     }
 
+    // [RBAC] 매수자 등급 및 공유 링크 접근 시 보안 설정: 드래그 및 우클릭 금지
+    const isBuyer = userData && userData.role === 'buyer';
+    const isSharedLink = fromSource === 'shared';
+    if (isBuyer || isSharedLink) {
+        $('body').css({
+            '-webkit-user-select': 'none',
+            '-moz-user-select': 'none',
+            '-ms-user-select': 'none',
+            'user-select': 'none'
+        });
+        $(document).on('dragstart contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    }
+
     const user_id = userData ? userData.id : null;
 
     // 블라인드 설정 전역 변수

@@ -15,18 +15,78 @@ export function checkAuth() {
     } catch (e) {
         console.warn('checkAuth: localStorage 파싱 실패', e);
     }
+    
+    const currentPath = window.location.pathname;
+    const signinPath = currentPath.includes('/html/') ? './signin.html' : './html/signin.html';
+
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
-        // Adjust path based on current location
-        const currentPath = window.location.pathname;
-        if (currentPath.includes('/html/')) {
-            location.href = './signin.html';
-        } else {
-            location.href = './html/signin.html';
-        }
+        location.href = signinPath;
         return null;
     }
+
+    // 승인 상태 확인
+    if (userData.status === 'pending') {
+        alert('관리자의 가입 승인을 기다리는 중입니다.');
+        localStorage.removeItem('dealchat_users');
+        location.href = signinPath;
+        return null;
+    } else if (userData.status === 'rejected') {
+        alert('가입 승인이 거부되었습니다. 관리자에게 문의해 주세요.');
+        localStorage.removeItem('dealchat_users');
+        location.href = signinPath;
+        return null;
+    }
+
+    // [RBAC] 매수자 등급 전역 보안 및 접근 제어 적용
+    if (userData.role === 'buyer') {
+        applyBuyerRestrictions();
+        
+        // 허용되지 않은 페이지 접근 시 리다이렉트 (Total Sellers 및 Dashboard만 허용)
+        const allowedPages = ['index.html', 'total_sellers.html', 'dealbook_sellers.html', 'signin.html', 'signup.html', 'mypage.html'];
+        const isAllowed = allowedPages.some(page => currentPath.includes(page));
+        
+        // 루트(/) 또는 빈 경로인 경우(index.html) 허용
+        const isRoot = currentPath.endsWith('/') || currentPath.endsWith('DealChat');
+        
+        if (!isAllowed && !isRoot) {
+            alert('해당 페이지에 접근할 권한이 없습니다.');
+            location.href = signinPath.replace('signin.html', 'total_sellers.html');
+            return null;
+        }
+    }
+
     return userData;
+}
+
+/**
+ * Applies global security restrictions for the 'buyer' role.
+ * Prevents dragging, text selection, and context menu.
+ */
+function applyBuyerRestrictions() {
+    // 1. CSS를 통한 텍스트 선택 방지
+    const style = document.createElement('style');
+    style.innerHTML = `
+        body {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 2. JS를 통한 드래그 및 우클릭 차단
+    window.addEventListener('dragstart', (e) => e.preventDefault(), true);
+    window.addEventListener('contextmenu', (e) => e.preventDefault(), true);
+    
+    // 3. 복사 키 조합 차단 (Ctrl+C, Ctrl+V, Ctrl+U 등)
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'u', 's', 'p'].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+            return false;
+        }
+    }, true);
 }
 
 /**

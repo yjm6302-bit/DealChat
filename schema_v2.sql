@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     agree_marketing BOOLEAN DEFAULT FALSE, -- 마케팅정보 수신 동의
     is_active BOOLEAN DEFAULT TRUE, -- 회원가입 상태 (T: 가입중, F: 탈퇴)
     last_login_at TIMESTAMPTZ, -- 최근 접속일자
+    status TEXT DEFAULT 'pending', -- 승인 상태 (pending, approved, rejected)
+    role TEXT DEFAULT 'reviewer', -- 사용자 등급 (reviewer, buyer, admin)
     created_at TIMESTAMPTZ DEFAULT NOW(), -- 생성일자
     updated_at TIMESTAMPTZ DEFAULT NOW() -- 수정일자
 );
@@ -145,7 +147,9 @@ BEGIN
         is_active,
         agree_terms,
         agree_privacy,
-        agree_marketing
+        agree_marketing,
+        status,
+        role
     )
     VALUES (
         NEW.id,
@@ -158,7 +162,9 @@ BEGIN
         TRUE,
         COALESCE((NEW.raw_user_meta_data->>'agree_terms')::boolean, FALSE),
         COALESCE((NEW.raw_user_meta_data->>'agree_privacy')::boolean, FALSE),
-        COALESCE((NEW.raw_user_meta_data->>'agree_marketing')::boolean, FALSE)
+        COALESCE((NEW.raw_user_meta_data->>'agree_marketing')::boolean, FALSE),
+        'pending',
+        'reviewer'
     );
     RETURN NEW;
 END;
@@ -183,6 +189,15 @@ CREATE TRIGGER on_auth_user_deleted
     BEFORE DELETE ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_user_delete();
 
+-- RLS 우회를 위한 관리자 권한 확인 함수
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- 9. Row Level Security (RLS) 설정
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
@@ -192,8 +207,13 @@ ALTER TABLE public.shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.qna ENABLE ROW LEVEL SECURITY;
 
 -- 상세 정책
-CREATE POLICY "Users can see themselves" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update themselves" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can see themselves or admin sees all"
+  ON public.users FOR SELECT
+  USING (auth.uid() = id OR public.is_admin());
+
+CREATE POLICY "Users can update themselves or admin updates all"
+  ON public.users FOR UPDATE
+  USING (auth.uid() = id OR public.is_admin());
 
 CREATE POLICY "Users can manage their own companies" ON public.companies FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can see shared companies" ON public.companies FOR SELECT USING (EXISTS (SELECT 1 FROM public.shares WHERE item_id = companies.id AND receiver_id = auth.uid()));

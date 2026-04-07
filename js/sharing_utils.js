@@ -122,12 +122,17 @@ export async function validateShareKey(supabase, itemId, inputKey) {
     return data;
 }
 
-/**
- * Initialize External Sharing Logic for List Pages
- * @param {string} itemType - 'buyer' or 'seller'
- * @param {string} themeColor - Hex color (e.g., '#0d9488' for Teal, '#8b5cf6' for Purple)
- */
 export function initExternalSharing(itemType, themeColor = '#0d9488') {
+    // [RBAC] 매수자 등급은 공유 기능 사용 불가
+    try {
+        const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+        if (userData && userData.role === 'buyer') {
+            const $btn = $('#btn-external-share-trigger');
+            if ($btn.length) $btn.hide();
+            return;
+        }
+    } catch (e) {}
+
     // 1. Open External Share Modal
     $('#btn-external-share-trigger').off('click').on('click', function() {
         // [Bug Fix] Blur the button to avoid focus being trapped in a hidden modal (aria-hidden)

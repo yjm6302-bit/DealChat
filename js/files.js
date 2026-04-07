@@ -56,8 +56,6 @@ $(document).ready(function () {
         {
             headerName: "",
             width: 50,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
             suppressMenu: true,
             pinned: 'left'
         },
@@ -143,7 +141,12 @@ $(document).ready(function () {
         },
         pagination: true,
         paginationPageSize: 20,
-        rowSelection: 'multiple',
+        paginationPageSizeSelector: [10, 20, 50, 100],
+        rowSelection: {
+            mode: 'multiRow',
+            headerCheckbox: true,
+            checkboxes: true
+        },
         onRowClicked: (params) => {
             if (params.data) {
                 openFileDetail(params.data);

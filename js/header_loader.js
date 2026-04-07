@@ -62,7 +62,10 @@
 
         const htmlPath = isSubPage ? '' : 'html/';
         const myPagePath = isSubPage ? 'mypage.html' : 'html/mypage.html';
-        const dashboardPath = isSubPage ? 'index.html' : 'html/index.html';
+        const isBuyer = userData && userData.role === 'buyer';
+        const dashboardPath = isBuyer
+            ? (isSubPage ? 'total_sellers.html' : 'html/total_sellers.html')
+            : (isSubPage ? 'index.html' : 'html/index.html');
         const qnaPath = isSubPage ? 'qna.html' : 'html/qna.html';
         const ndaPath = isSubPage ? 'nda_management.html' : 'html/nda_management.html';
 
@@ -167,46 +170,48 @@
                                     <span class="user-name d-none d-sm-inline-block" style="color:#1e293b; font-weight: 700; font-size: 15px;">${userName}</span>
                                 </div>
                                 
-                                <!-- Dropdown Menu (Moved outside trigger) -->
-                                <div class="user-menu-dropdown" id="user-menu-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(15,23,42,0.12), 0 2px 8px rgba(15,23,42,0.06); width: 240px; padding: 0; z-index: 9999; border: 1px solid #e2e8f0; opacity: 0; transform: translateY(10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; margin-top: 10px; overflow: hidden;">
-                                    <!-- 메뉴 본체 -->
-                                    <div style="padding: 12px 8px;">
-                                        <!-- 섹션 1: 관리 도구 (향후 운영자 전용 예정) -->
-                                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">관리 도구</div>
-                                        
-                                                        <a href="${isSubPage ? 'shared_items.html' : 'html/shared_items.html'}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
-                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">share</span>
-                                            <span style="flex: 1;">공유목록</span>
-                                            <span class="shared-count-badge" id="shared-count-badge">0</span>
-                                        </a>
+                <!-- Dropdown Menu (Moved outside trigger) -->
+                <div class="user-menu-dropdown" id="user-menu-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(15,23,42,0.12), 0 2px 8px rgba(15,23,42,0.06); width: 240px; padding: 0; z-index: 9999; border: 1px solid #e2e8f0; opacity: 0; transform: translateY(10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; margin-top: 10px; overflow: hidden;">
+                    <!-- 메뉴 본체 -->
+                    <div style="padding: 12px 8px;">
+                        ${userData && userData.role !== 'buyer' ? `
+                        <!-- 섹션 1: 관리 도구 (향후 운영자 전용 예정) -->
+                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">관리 도구</div>
+                        
+                        <a href="${isSubPage ? 'shared_items.html' : 'html/shared_items.html'}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">share</span>
+                            <span style="flex: 1;">공유목록</span>
+                            <span class="shared-count-badge" id="shared-count-badge">0</span>
+                        </a>
 
-                                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
+                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
+                        ` : ''}
 
-                                        <!-- 섹션 2: 내 활동 -->
-                                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">내 활동</div>
-                                        
-                                        <a href="${myPagePath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
-                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">manage_accounts</span>
-                                            <span>마이페이지</span>
-                                        </a>
-                                        <a href="${ndaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
-                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">history</span>
-                                            <span>열람기록</span>
-                                        </a>
-                                        <a href="${qnaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
-                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">help_outline</span>
-                                            <span>문의하기</span>
-                                        </a>
+                        <!-- 섹션 2: 내 활동 -->
+                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">내 활동</div>
+                        
+                        <a href="${myPagePath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">manage_accounts</span>
+                            <span>마이페이지</span>
+                        </a>
+                        <a href="${ndaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">${userData && userData.role === 'buyer' ? 'verified_user' : 'history'}</span>
+                            <span>${userData && userData.role === 'buyer' ? 'NDA 서명 내역' : '열람기록'}</span>
+                        </a>
+                        <a href="${qnaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">help_outline</span>
+                            <span>문의하기</span>
+                        </a>
 
-                                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
+                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
 
-                                        <!-- 섹션 3: 세션 -->
-                                        <div class="user-menu-item" id="btn-signout" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #ef4444; border-radius: 8px; font-size: 13.5px; transition: background 0.15s; cursor: pointer;">
-                                            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
-                                            <span style="font-weight: 600;">로그아웃</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        <!-- 섹션 3: 세션 -->
+                        <div class="user-menu-item" id="btn-signout" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #ef4444; border-radius: 8px; font-size: 13.5px; transition: background 0.15s; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+                            <span style="font-weight: 600;">로그아웃</span>
+                        </div>
+                    </div>
+                </div>
                             </li>
                         </ul>
                     </div>

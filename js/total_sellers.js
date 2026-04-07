@@ -53,6 +53,20 @@ $(document).ready(function () {
     const user_id = currentUserData.id;
     currentuser_id = user_id;
 
+    // [RBAC] 매수자 등급 보안 설정: 드래그 및 우클릭 금지
+    if (currentUserData.role === 'buyer') {
+        $('body').css({
+            '-webkit-user-select': 'none',
+            '-moz-user-select': 'none',
+            '-ms-user-select': 'none',
+            'user-select': 'none'
+        });
+        $(document).on('dragstart contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    }
+
     // Header profile and menu are now initialized globally by header_loader.js
 
     loadInitialData();
@@ -412,7 +426,7 @@ function renderSellers() {
                 </td>
                 <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important; font-size: 13px; color: #94a3b8; font-family: 'Outfit', sans-serif;">${dateDisplay}</td>
                 <td style="padding: 20px 24px !important; text-align: center !important; vertical-align: middle !important; white-space: nowrap;" onclick="event.stopPropagation();">
-                    ${(isRestricted || !isAuthorized) ? '' : `
+                    ${(isRestricted || !isAuthorized || currentUserData.role === 'buyer') ? '' : `
                     <button class="row-action-btn" style="margin-left: 0;" title="매도자 공유하기" onclick="openShareModal('${seller.id}')">
                         <span class="material-symbols-outlined" style="font-size: 18px;">share</span>
                     </button>

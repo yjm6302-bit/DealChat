@@ -1,5 +1,7 @@
 import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatarUrl, DEFAULT_MANAGER } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
+import { initExternalSharing } from './sharing_utils.js';
+import { debounce, escapeHtml } from './utils.js';
 
 // 프로필 모달 스크립트 로드
 const script = document.createElement('script');
@@ -22,11 +24,9 @@ let currentSort = 'latest'; // 'latest', 'name', 'revenue', 'investment'
 
 // Inbox state
 let inboxItems = []; // Received
-let outboxItems = []; // Sent
-let currentInboxTab = 'received';
 let currentInboxSort = 'newest';
 let selectedInboxItems = new Set();
-let shareTargetCompanyId = null;
+window.currentShareCompanyId = null;
 let selectedReceivers = [];
 
 $(document).ready(function () {
@@ -37,20 +37,13 @@ $(document).ready(function () {
     // Header profile and menu are now initialized globally by header_loader.js
 
     loadInitialData();
-    fetchInbox();
 
     // --- Search & Filters ---
-    $('#search-btn').on('click', () => { applyFilters(); });
+    $('#search-icon-btn').on('click', () => { applyFilters(); });
     $('#search-input').on('keypress', (e) => {
         if (e.which === 13) { applyFilters(); }
     });
 
-    $('#filter-toggle-btn').on('click', function () {
-        const $container = $('#filter-container');
-        const isVisible = $container.is(':visible');
-        $container.slideToggle();
-        $(this).toggleClass('active', !isVisible);
-    });
 
     $(document).on('change', '.industry-checkbox, .mgmt-checkbox, .visibility-checkbox', () => {
         applyFilters();
@@ -67,9 +60,7 @@ $(document).ready(function () {
         applyFilters();
     });
 
-    $('#filter-min-revenue, #filter-max-revenue, #filter-min-investment, #filter-max-investment').on('input', () => {
-        applyFilters();
-    });
+    $('#filter-min-revenue, #filter-max-revenue, #filter-min-investment, #filter-max-investment').on('input', debounce(applyFilters, 300));
 
     $('#reset-filters').on('click', function () {
         $('.industry-checkbox, .mgmt-checkbox, .stage-checkbox').prop('checked', false);
@@ -91,24 +82,12 @@ $(document).ready(function () {
     // --- Export ---
     $('#export-csv-btn').on('click', exportToCSV);
 
-    // --- Inbox & Share ---
-    $('#inbox-btn').on('click', function () {
-        currentInboxTab = 'received';
-        $('#received-tab').addClass('active').css({ 'background': '#ffffff', 'color': '#1e293b', 'box-shadow': '0 2px 4px rgba(0,0,0,0.05)' });
-        $('#sent-tab').removeClass('active').css({ 'background': 'transparent', 'color': '#64748b', 'box-shadow': 'none' });
-        renderInbox();
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('inbox-modal'));
-        modal.show();
-    });
+    // 외부 공유 및 단순 URL 복사 초기화
+    initExternalSharing('company', '#1A73E8');
 
-    $('#received-tab, #sent-tab').on('click', function () {
-        if ($(this).hasClass('active')) return;
-        currentInboxTab = $(this).attr('id') === 'received-tab' ? 'received' : 'sent';
-        selectedInboxItems.clear();
-        $('.inbox-tab-btn').removeClass('active').css({ 'background': 'transparent', 'color': '#64748b', 'box-shadow': 'none' });
-        $(this).addClass('active').css({ 'background': '#ffffff', 'color': '#1e293b', 'box-shadow': '0 2px 4px rgba(0,0,0,0.05)' });
-        renderInbox();
-    });
+    // --- Inbox & Share ---
+
+
 
     $(document).on('click', '.inbox-sort-option', function(e) {
         e.preventDefault();
@@ -130,7 +109,7 @@ $(document).ready(function () {
     $(document).on('change', '#inbox-select-all', function(e) {
         e.stopPropagation();
         const isChecked = $(this).is(':checked');
-        const items = currentInboxTab === 'received' ? inboxItems : outboxItems;
+        const items = inboxItems;
         selectedInboxItems.clear();
         if (isChecked) items.forEach(item => selectedInboxItems.add(item.id));
         $('.item-checkbox').prop('checked', isChecked);
@@ -140,14 +119,14 @@ $(document).ready(function () {
     $('#btn-delete-inbox').on('click', async function() {
         const count = selectedInboxItems.size;
         if (count === 0) return;
-        if (confirm(`선택하신 ${count}개의 공유 내역을 정말 삭제하시겠습니까?`)) {
+        if (confirm(`선택하신 ${count}개의 공유 내역을 수함에서 삭제하시겠습니까?`)) {
             const arr = Array.from(selectedInboxItems);
             await Promise.all(arr.map(id => {
-                return APIcall({ table: 'shares', action: 'delete', id: id }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
+                // 물리적 삭제 대신 논리적 삭제(receiver_deleted = true) 진행
+                return APIcall({ table: 'shares', action: 'update', id: id, receiver_deleted: true }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
                     .catch(e => console.error('Delete fail', e));
             }));
-            if (currentInboxTab === 'received') inboxItems = inboxItems.filter(item => !selectedInboxItems.has(item.id));
-            else outboxItems = outboxItems.filter(item => !selectedInboxItems.has(item.id));
+            inboxItems = inboxItems.filter(item => !selectedInboxItems.has(item.id));
             selectedInboxItems.clear();
             updateInboxBadge();
             renderInbox();
@@ -181,8 +160,8 @@ $(document).ready(function () {
         $('#user-search-results').hide();
     });
 
-    $('#btn-submit-share').on('click', async function() {
-        if (selectedReceivers.length === 0) { alert('공유할 대상을 1명 이상 선택해 주세요.'); return; }
+    $('#btn-submit-share').on('click', async function () {
+        if (selectedReceivers.length === 0) { alert('공유할 타인을 한 명 이상 선택해 주세요.'); return; }
         const memo = $('#share-memo').val().trim();
         const btn = this;
         $(btn).prop('disabled', true).text('전송 중...');
@@ -208,30 +187,24 @@ $(document).ready(function () {
             const errs = results.filter(r => r.error);
             if (errs.length > 0) alert(`${errs.length}건의 공유 중 오류 발생.`);
             else {
-                alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
+                alert(`${selectedReceivers.length}명의 팀원에게 공유되었습니다.`);
                 bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
-                fetchInbox();
+                fetchInbox(); // 인박스 갱신 (보낸 내역 확인용)
             }
-        }).catch(e => { 
-            console.error('Share Error', e); 
-            alert('공유 요청 실패: ' + (e.message || '알 수 없는 오류')); 
-        })
-        .finally(() => $(btn).prop('disabled', false).text('보내기'));
+        }).catch(e => {
+            console.error('Share Error', e);
+            alert('공유 요청 실패: ' + (e.message || '알 수 없는 오류'));
+        }).finally(() => $(btn).prop('disabled', false).text('보내기'));
     });
 
-    $('#btn-share-with-user-trigger').on('click', function() {
-        bootstrap.Modal.getInstance(document.getElementById('share-options-modal')).hide();
-        const modal = new bootstrap.Modal(document.getElementById('share-modal'));
-        modal.show();
-    });
+    $('#btn-share-with-user-trigger').on('click', function () {
+        const modalEl = document.getElementById('share-options-modal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
 
-    $('#btn-share-url').on('click', function() {
-        // Construct the Dealbook URL with read-only parameter
-        const url = `${window.location.origin}/html/dealbook_companies.html?id=${shareTargetCompanyId}&from=totalstartup`;
-        navigator.clipboard.writeText(url).then(() => {
-            alert('URL이 클립보드에 복사되었습니다.');
-            bootstrap.Modal.getInstance(document.getElementById('share-options-modal')).hide();
-        });
+        const shareModalEl = document.getElementById('share-modal');
+        const shareModal = new bootstrap.Modal(shareModalEl);
+        shareModal.show();
     });
 });
 
@@ -243,8 +216,8 @@ async function fetchFiles(companyId) {
         const { data, error } = await _supabase
             .from('files')
             .select('*')
-            .eq('company_id', companyId)
-            .is('deleted_at', null);
+            .eq('entity_type', 'company')
+            .eq('entity_id', companyId);
 
         if (error) throw error;
 
@@ -338,14 +311,11 @@ async function loadInitialData() {
 
 function fetchInbox() {
     if (!currentuser_id) return;
-    const rPayload = { table: 'shares', action: 'get', receiver_id: currentuser_id };
-    const sPayload = { table: 'shares', action: 'get', sender_id: currentuser_id };
-    Promise.all([
-        APIcall(rPayload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json()),
-        APIcall(sPayload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json())
-    ]).then(([rData, sData]) => {
+    const rPayload = { table: 'shares', action: 'get', receiver_id: currentuser_id, receiver_deleted: false };
+    APIcall(rPayload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
+    .then(res => res.json())
+    .then(rData => {
         inboxItems = (Array.isArray(rData) ? rData : rData?.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        outboxItems = (Array.isArray(sData) ? sData : sData?.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         updateInboxBadge();
     }).catch(e => console.error('Inbox Error', e));
 }
@@ -409,10 +379,12 @@ function applyFilters() {
         if (!matchesIndustry) return false;
 
         // Management Status match
-        const companyMgmt = company.managementStatus || "";
+        const companyMgmt = company.mgmt_status || "";
         const matchesMgmt = selectedMgmt.length === 0 || (companyMgmt && selectedMgmt.some(m => {
-            if (m === '기타') return !['발굴 기업', '보육 기업', '투자 기업'].includes(companyMgmt);
-            return companyMgmt === m;
+            const normalizedStatus = companyMgmt.replace(/\s+/g, '');
+            const normalizedMatch = m.replace(/\s+/g, '');
+            if (normalizedMatch === '기타') return !['발굴기업', '보육기업', '투자기업'].includes(normalizedStatus);
+            return normalizedStatus === normalizedMatch;
         }));
         if (!matchesMgmt) return false;
 
@@ -432,12 +404,20 @@ function applyFilters() {
     // Sort
     if (currentSort === 'latest') {
         filteredCompanies.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
-    } else if (currentSort === 'name') {
-        filteredCompanies.sort((a, b) => a.company_name.localeCompare(b.company_name, 'ko-KR'));
-    } else if (currentSort === 'revenue') {
+    } else if (currentSort === 'oldest') {
+        filteredCompanies.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at));
+    } else if (currentSort === 'name_asc') {
+        filteredCompanies.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "", 'ko-KR'));
+    } else if (currentSort === 'name_desc') {
+        filteredCompanies.sort((a, b) => (b.company_name || "").localeCompare(a.company_name || "", 'ko-KR'));
+    } else if (currentSort === 'revenue_desc') {
         filteredCompanies.sort((a, b) => extractNumber(getLatestMetrics(b).revenue.value) - extractNumber(getLatestMetrics(a).revenue.value));
-    } else if (currentSort === 'investment') {
+    } else if (currentSort === 'revenue_asc') {
+        filteredCompanies.sort((a, b) => extractNumber(getLatestMetrics(a).revenue.value) - extractNumber(getLatestMetrics(b).revenue.value));
+    } else if (currentSort === 'investment_desc') {
         filteredCompanies.sort((a, b) => extractNumber(getLatestMetrics(b).investment.value) - extractNumber(getLatestMetrics(a).investment.value));
+    } else if (currentSort === 'investment_asc') {
+        filteredCompanies.sort((a, b) => extractNumber(getLatestMetrics(a).investment.value) - extractNumber(getLatestMetrics(b).investment.value));
     }
 
     currentPage = 1;
@@ -455,21 +435,24 @@ function renderCompanies() {
     const items = filteredCompanies.slice(start, end);
 
     items.forEach(c => {
-        const date = new Date(c.updated_at || c.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
+        const d = new Date(c.updated_at || c.created_at);
+        const date = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
         const authorData = userMap[c.user_id] || DEFAULT_MANAGER;
         const metrics = getLatestMetrics(c);
         
         $container.append(`<tr onclick="showCompanyDetail('${c.id}')" style="cursor: pointer;">
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3" style="min-width: 0;">
                     <div style="width: 36px; height: 36px; background: #1A73E8; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <span class="material-symbols-outlined" style="color: #ffffff; font-size: 20px;">${getIndustryIcon(c.industry)}</span>
                     </div>
-                    <span class="company-name-td text-truncate" style="max-width: 140px;">${escapeHtml(c.company_name)}</span>
+                    <div style="flex: 1; min-width: 0;">
+                        <span class="fw-bold text-truncate" style="display: block; font-size: 14px;">${escapeHtml(c.company_name)}</span>
+                    </div>
                 </div>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <span class="industry-tag-td">${escapeHtml(c.industry)}</span>
+                <span class="industry-tag-td" style="background: #eff6ff; color: #1a73e8; border: 1px solid #dbeafe;">${escapeHtml((c.industry || "기타").replace(/^기타:\s*/, ''))}</span>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;">
                 <div style="font-size: 13px; font-weight: 500; color: #1e293b;">
@@ -485,7 +468,7 @@ function renderCompanies() {
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
                 <div class="summary-td">${escapeHtml(c.summary)}</div>
-                ${c.managementStatus ? `<div><span class="badge border" style="background: #f0f7ff; color: #1A73E8; border-color: #dbeafe !important; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">#${escapeHtml(c.managementStatus.replace(/\s+/g, ''))}</span></div>` : ''}
+                ${c.mgmt_status ? `<div><span class="mgmt-status-badge border" style="background: #f0f7ff; color: #1A73E8; border: 1px solid #dbeafe;">#${escapeHtml(c.mgmt_status.replace(/\s+/g, ''))}</span></div>` : ''}
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important; cursor: pointer;" onclick="event.stopPropagation(); showProfileModal('${c.user_id}')">
                 <div class="author-td">
@@ -496,9 +479,9 @@ function renderCompanies() {
                     </div>
                 </div>
             </td>
-            <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; text-align: left !important;">${date}</td>
+            <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; text-align: left !important; font-size: 13px; color: #94a3b8; font-family: 'Outfit', sans-serif;">${date}</td>
             <td style="padding: 20px 24px !important;" onclick="event.stopPropagation();">
-                <button class="row-action-btn" onclick="openShareOptions('${c.id}')"><span class="material-symbols-outlined" style="font-size: 18px;">share</span></button>
+                <button class="row-action-btn" onclick="window.openShareOptions('${c.id}')"><span class="material-symbols-outlined" style="font-size: 18px;">share</span></button>
             </td>
         </tr>`);
     });
@@ -508,7 +491,8 @@ window.showCompanyDetail = function (id) {
     const c = allCompanies.find(x => x.id === id);
     if (!c) return;
     const authorData = userMap[c.user_id] || DEFAULT_MANAGER;
-    const dateStr = `등록일: ${new Date(c.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+    const d_reg = new Date(c.created_at);
+    const dateStr = `등록일: ${d_reg.getFullYear()}.${String(d_reg.getMonth()+1).padStart(2,'0')}.${String(d_reg.getDate()).padStart(2,'0')}`;
 
     $('#detail-company-icon').text(getIndustryIcon(c.industry));
     $('#detail-company-name').text(c.company_name);
@@ -524,11 +508,10 @@ window.showCompanyDetail = function (id) {
 
     const createdDate = new Date(c.created_at);
     const updatedDate = c.updated_at ? new Date(c.updated_at) : null;
-    const formatDate = (date) => date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    
+    const d_detail = (updatedDate && updatedDate.getTime() !== createdDate.getTime()) ? updatedDate : createdDate;
     const dateDisplay = (updatedDate && updatedDate.getTime() !== createdDate.getTime())
-        ? `최종 수정: ${formatDate(updatedDate)}`
-        : `등록일: ${formatDate(createdDate)}`;
+        ? `최종 수정: ${d_detail.getFullYear()}.${String(d_detail.getMonth()+1).padStart(2,'0')}.${String(d_detail.getDate()).padStart(2,'0')} ${String(d_detail.getHours()).padStart(2,'0')}:${String(d_detail.getMinutes()).padStart(2,'0')}`
+        : `등록일: ${d_detail.getFullYear()}.${String(d_detail.getMonth()+1).padStart(2,'0')}.${String(d_detail.getDate()).padStart(2,'0')} ${String(d_detail.getHours()).padStart(2,'0')}:${String(d_detail.getMinutes()).padStart(2,'0')}`;
 
     const authorDisplayName = authorData.name || DEFAULT_MANAGER.name;
     $('#detail-author-name').text(authorDisplayName);
@@ -557,24 +540,68 @@ window.showCompanyDetail = function (id) {
 };
 
 window.openShareOptions = function (id) {
-    shareTargetCompanyId = id;
+    window.currentShareCompanyId = id;
     selectedReceivers = [];
     renderSelectedTags();
     $('#share-memo').val('');
     fetchFiles(id);
-    new bootstrap.Modal(document.getElementById('share-options-modal')).show();
+    const modalEl = document.getElementById('share-options-modal');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
-window.handleInboxClick = function (shareId, companyId, mode, event) {
-    if ($(event.target).is('input[type="checkbox"]')) return;
-    if (mode === 'received') {
-        const item = inboxItems.find(i => i.id === shareId);
-        if (item && !item.is_read) {
-            item.is_read = true;
-            updateInboxBadge();
-            renderInbox();
-            APIcall({ table: 'shares', action: 'update', id: shareId, is_read: true }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' });
+function submitShare(companyId, btnElement) {
+    const memo = $('#share-memo').val().trim();
+    if (selectedReceivers.length === 0) {
+        alert('공유할 대상을 한 명 이상 선택해 주세요.');
+        return;
+    }
+    const $btn = $(btnElement);
+    const originalText = $btn.text();
+    $btn.prop('disabled', true).text('전송 중...');
+
+    const selectedFileIds = $('.share-file-checkbox:checked').map(function() {
+        return $(this).val();
+    }).get();
+
+    const sharePromises = selectedReceivers.map(uid => {
+        return APIcall({
+            table: 'shares',
+            action: 'create',
+            item_type: 'company',
+            item_id: companyId,
+            sender_id: currentuser_id,
+            receiver_id: uid,
+            memo: memo,
+            file_ids: selectedFileIds,
+            is_read: false
+        }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json());
+    });
+
+    Promise.all(sharePromises).then(results => {
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) alert(`${errors.length}건의 공유 중 오류 발생.`);
+        else {
+            alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
+            bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
         }
+    }).catch(e => {
+        console.error('Share Error', e);
+        alert('공유 실패: ' + (e.message || '알 수 없는 오류'));
+    }).finally(() => $btn.prop('disabled', false).text(originalText));
+}
+
+$(document).on('click', '#btn-submit-share', function () {
+    submitShare(window.currentShareCompanyId, this);
+});
+
+window.handleInboxClick = function (shareId, companyId, event) {
+    if ($(event.target).is('input[type="checkbox"]')) return;
+    const item = inboxItems.find(i => i.id === shareId);
+    if (item && !item.is_read) {
+        item.is_read = true;
+        updateInboxBadge();
+        renderInbox();
+        APIcall({ table: 'shares', action: 'update', id: shareId, is_read: true }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' });
     }
     bootstrap.Modal.getInstance(document.getElementById('inbox-modal')).hide();
     setTimeout(() => { if (allCompanies.find(c => c.id === companyId)) showCompanyDetail(companyId); else alert('데이터를 찾을 수 없습니다.'); }, 300);
@@ -582,8 +609,7 @@ window.handleInboxClick = function (shareId, companyId, mode, event) {
 
 function renderInbox() {
     const $list = $('#inbox-list').empty();
-    const isR = currentInboxTab === 'received';
-    let items = [...(isR ? inboxItems : outboxItems)];
+    let items = [...inboxItems];
 
     items.sort((a, b) => {
         const dA = new Date(a.created_at);
@@ -595,17 +621,17 @@ function renderInbox() {
 
     updateInboxControls();
 
-    if (items.length === 0) { $list.append(`<div class="text-center text-muted py-5">${isR ? '수신' : '발신'} 내역이 없습니다.</div>`); return; }
+    if (items.length === 0) { $list.append(`<div class="text-center text-muted py-5">공유받은 내역이 없습니다.</div>`); return; }
 
     items.forEach(item => {
-        const otherId = isR ? item.sender_id : item.receiver_id;
+        const otherId = item.sender_id;
         const other = userMap[otherId] || { name: '정보 없음' };
         const company = allCompanies.find(c => c.id === item.company_id) || { company_name: '삭제된 기업', industry: '기타' };
-        const date = new Date(item.created_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const date = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         const check = selectedInboxItems.has(item.id) ? 'checked' : '';
         const statusHtml = item.is_read ? '<span style="color: #cbd5e1; font-size: 12px;">확인완료</span>' : '<span class="badge" style="background: #1A73E8; font-size: 11px;">미확인</span>';
 
-        $list.append(`<div class="inbox-row d-flex align-items-center px-3 py-3 mb-2" style="border-radius: 16px; border: 1px solid #eef2f6; background: ${isR && !item.is_read ? '#f5faff' : '#ffffff'}; cursor: pointer;" onclick="handleInboxClick('${item.id}', '${item.company_id}', '${currentInboxTab}', event)">
+        $list.append(`<div class="inbox-row d-flex align-items-center px-3 py-3 mb-2" style="border-radius: 16px; border: 1px solid #eef2f6; background: ${!item.is_read ? '#f5faff' : '#ffffff'}; cursor: pointer;" onclick="handleInboxClick('${item.id}', '${item.company_id}', event)">
             <div style="width: 5%;" class="text-center" onclick="event.stopPropagation();"><input class="form-check-input item-checkbox" type="checkbox" value="${item.id}" ${check}></div>
             <div style="width: 30%;" class="d-flex align-items-center gap-2">
                 <div style="width: 32px; height: 32px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">${getIndustryIcon(company.industry)}</span></div>
@@ -622,9 +648,9 @@ function renderInbox() {
 }
 
 function updateInboxControls() {
-    const items = currentInboxTab === 'received' ? inboxItems : outboxItems;
-    $('#header-target-label').text(currentInboxTab === 'received' ? '보낸 사람' : '받는 사람');
-    $('#header-date-label').text(currentInboxTab === 'received' ? '수신일시' : '발신일시');
+    const items = inboxItems;
+    $('#header-target-label').text('보낸 사람');
+    $('#header-date-label').text('수신일시');
     const count = selectedInboxItems.size;
     $('#selected-count').text(count);
     $('#btn-delete-inbox').prop('disabled', count === 0);
@@ -634,23 +660,24 @@ function updateInboxControls() {
 function renderPagination() {
     const $container = $('#pagination-container').empty();
     const total = Math.ceil(filteredCompanies.length / itemsPerPage);
-    if (total <= 1) return;
+    if (total < 1) return; // 0페이지인 경우만 숨김 (1페이지부터는 표시)
+
     const prevD = currentPage === 1 ? 'disabled' : '';
     const nextD = currentPage === total ? 'disabled' : '';
     
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${prevD} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${prevD} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
+    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
+    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
     
     let start = Math.max(1, currentPage - 2);
     let end = Math.min(total, start + 4);
     if (end - start < 4) start = Math.max(1, end - 4);
     
     for (let i = start; i <= end; i++) {
-        $container.append(`<button class="btn btn-outline-light pagination-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`);
+        $container.append(`<button class="pg-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`);
     }
     
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${nextD} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${nextD} onclick="changePage(${total})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
+    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
+    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${total})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
 }
 
 window.changePage = function (p) {
@@ -691,7 +718,7 @@ function parseCompanyData(company) {
         }
         parsed.summary = mainSummary.replace(/^(\[.*?\]|#\S+)\s*/, '').trim();
         if (metaText) {
-            const mgmtMatch = metaText.match(/관리\s*현황\s*:\s*(.*)/); if (mgmtMatch) parsed.managementStatus = mgmtMatch[1].split('\n')[0].trim();
+            const mgmtMatch = metaText.match(/관리\s*현황\s*:\s*(.*)/); if (mgmtMatch) parsed.mgmt_status = mgmtMatch[1].split('\n')[0].trim();
             const invStatusMatch = metaText.match(/투자\s*현황\s*:\s*((?:.|\n)*?)(?=(관리현황:|발굴 경로:|투자 유무:|투자 밸류:|투자 금액:|대표자명:|이메일:|설립일자:|주소:|재무 현황:|재무 분석:|담당자 메모:|담당자 의견:|$))/); if (invStatusMatch) parsed.investmentStatusDesc = invStatusMatch[1].trim();
             const finStatusMatch = metaText.match(/재무\s*현황\s*:\s*((?:.|\n)*?)(?=(관리현황:|발굴 경로:|투자 유무:|투자 밸류:|투자 금액:|대표자명:|이메일:|설립일자:|주소:|투자 현황:|재무 분석:|담당자 메모:|담당자 의견:|$))/); if (finStatusMatch) parsed.financialStatusDesc = finStatusMatch[1].trim();
             const amountMatch = metaText.match(/투자\s*금액\s*:\s*(.*)/); if (amountMatch) parsed.investmentAmount = amountMatch[1].split('\n')[0].trim();
@@ -701,7 +728,7 @@ function parseCompanyData(company) {
     // [New Schema Support] DB에서 직접 데이터(JSONB 배열)가 있으면 우선
     if (Array.isArray(company.financial_info) && company.financial_info.length > 0) parsed.financialDataArr = company.financial_info;
     if (Array.isArray(company.investment_info) && company.investment_info.length > 0) parsed.investmentDataArr = company.investment_info;
-    if (company.mgmt_status) parsed.managementStatus = company.mgmt_status;
+    if (company.mgmt_status) parsed.mgmt_status = company.mgmt_status;
     if (company.manager_memo) parsed.managerMemo = company.manager_memo;
     if (company.ceo_name) parsed.ceoName = company.ceo_name;
     if (company.establishment_date) parsed.establishmentDate = company.establishment_date;
@@ -864,20 +891,15 @@ function getIndustryIcon(ind) {
     return map[ind] || 'corporate_fare';
 }
 
-function escapeHtml(t) {
-    if (!t) return "";
-    return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
 function exportToCSV() {
     if (filteredCompanies.length === 0) { alert('데이터가 없습니다.'); return; }
-    const headers = ['기업명', '산업', '매출액(억)', '누적투자금(억)', '요약', '담당자', '수정일'];
+    const headers = ['기업명', '산업', '매출액(억)', '누적투자금(억)', '요약', '담당자', '등록일'];
     const rows = filteredCompanies.map(c => {
         const metrics = getLatestMetrics(c);
         const summary = (c.summary || "").replace(/\n/g, ' ');
         return [
             c.company_name, c.industry, metrics.revenue.value || '0', metrics.investment.value || '0', summary,
-            userMap[c.user_id]?.name || '미상', new Date(c.updated_at || c.created_at).toLocaleDateString()
+            userMap[c.user_id]?.name || '미상', (() => { const d = new Date(c.updated_at || c.created_at); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })()
         ].map(f => `"${String(f).replace(/"/g, '""')}"`);
     });
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

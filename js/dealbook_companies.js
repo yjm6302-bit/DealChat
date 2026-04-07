@@ -2,6 +2,10 @@ import { addAiResponse, searchVectorDB } from './AI_Functions.js';
 import { APIcall } from './APIcallFunction.js';
 import { filetypecheck, fileUpload, downloadTextFile } from './File_Functions.js';
 import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, showLoader, resolveAvatarUrl, DEFAULT_MANAGER } from './auth_utils.js';
+import { checkNdaStatus, initNdaGate } from './sharing_utils.js';
+import { escapeForDisplay, tryRepairJson, resolveIndustry, resolveMgmtStatus, buildFinancialString, buildInvestmentString, buildChatContext } from './utils.js';
+import { initModelSelector } from './model_selector.js';
+
 
 // 프로필 모달 스크립트 로드
 const script = document.createElement('script');
@@ -16,6 +20,7 @@ const SUPABASE_ENDPOINT = window.config.supabase.uploadHandlerUrl;
 const SUPABASE_STORAGE_URL = `${window.config.supabase.url}/storage/v1/object/public/uploads/`;
 
 $(document).ready(function () {
+    showLoader();
     // ==========================================
     // 인증 및 초기 설정
     // ==========================================
@@ -24,20 +29,41 @@ $(document).ready(function () {
         userData = JSON.parse(localStorage.getItem('dealchat_users'));
     } catch (e) {}
 
-    if (!userData || !userData.isLoggedIn) {
-        checkAuth();
-        return;
-    }
-
-    const user_id = userData.id;
-
-    updateHeaderProfile(userData);
-    initUserMenu();
-
     const urlParams = new URLSearchParams(window.location.search);
     const companyId = urlParams.get('id');
     const fromSource = urlParams.get('from');
+
+    // [New] 이전 페이지(목록)로 돌아갈 URL 설정
+    let returnUrl = './my_companies.html';
+    if (fromSource === 'total_companies' || fromSource === 'totalstartup') {
+        returnUrl = './total_companies.html';
+    }
+
+    // [New] 헤더의 뒤로가기 버튼 URL 업데이트
+    $('.btn-icon-only[title="이전으로"]').off('click').on('click', function() {
+        location.href = returnUrl;
+    });
+
+    if (!userData || !userData.isLoggedIn) {
+        if (fromSource === 'shared' && companyId) {
+            console.log('Non-member accessing shared company report');
+        } else {
+            checkAuth();
+            return;
+        }
+    } else {
+        updateHeaderProfile(userData);
+        initUserMenu();
+    }
+
+    const user_id = userData ? userData.id : null;
     let isNew = companyId === 'new';
+    
+    if (isNew) {
+        $('#btn-delete-company').hide();
+    } else {
+        $('#btn-delete-company').show();
+    }
 
     let currentCompanyData = null;
     let availableFiles = [];
@@ -45,7 +71,6 @@ $(document).ready(function () {
     let availableReportTypes = [];
     let currentUploadIsTraining = true;
     let currentSourceType = 'training';
-    let myCompanies = []; // 내 기업 목록 (자동완성용)
 
     const $chatInput = $('#chat-input');
     const $chatMessages = $('#chat-messages');
@@ -55,68 +80,15 @@ $(document).ready(function () {
     const $notebookTitleText = $('#notebook-title-editor');
 
     // ==========================================
+    // AI 모델 선택기 초기화 및 관리
+    // ==========================================
+    // AI 모델 선택기
+    // ==========================================
+    const { markModelAsExceeded } = initModelSelector(addAiResponse);
+
+    // ==========================================
     // 데이터 로딩
     // ==========================================
-    // [New] 내 기업 목록 로드 (자동완성용)
-    async function loadMyCompanies() {
-        if (!isNew) return; // 신규 작성 시에만 자동완성 필요
-        try {
-            const { data, error } = await _supabase
-                .from('companies')
-                .select('*')
-                .eq('user_id', user_id)
-                .is('deleted_at', null);
-
-            if (data) {
-                myCompanies = data;
-                console.log('내 기업 목록 로드 완료:', myCompanies.length, '개');
-            }
-        } catch (err) {
-            console.error('loadMyCompanies error:', err);
-        }
-    }
-
-    // [New] 기업 정보 필드 채우기
-    function fillCompanyFields(company) {
-        if (!company) return;
-
-        $('#notebook-title-editor').text(company.name || '');
-        $('#industry').val(company.industry || '선택해주세요').trigger('change');
-        if (company.industry && company.industry.startsWith('기타: ')) {
-            $('#industry-other').val(company.industry.replace('기타: ', ''));
-        }
-
-        $('#ceo-name').val(company.ceo_name || '');
-        $('#company-email').val(company.email || '');
-        $('#establishment-date').val(company.establishment_date || '');
-        $('#company-address').val(company.address || '');
-        $('#summary').val(company.summary || '');
-        $('#financial-analysis').val(company.financial_analysis || '');
-        $('#manager-memo').val(company.manager_memo || '');
-
-        if (company.mgmt_status) setMgmtStatusChip(company.mgmt_status);
-
-        // 재무 정보
-        $('#financial-rows').empty();
-        if (company.financial_info && Array.isArray(company.financial_info)) {
-            company.financial_info.forEach(f => {
-                createFinancialRow(f.year, f.revenue, f.profit, f.net_profit);
-            });
-        }
-        if ($('#financial-rows').children().length === 0) createFinancialRow();
-
-        // 투자 정보
-        $('#investment-rows').empty();
-        if (company.investment_info && Array.isArray(company.investment_info)) {
-            company.investment_info.forEach(i => {
-                createInvestmentRow(i.year, i.stage, i.valuation, i.amount, i.investor);
-            });
-        }
-        if ($('#investment-rows').children().length === 0) createInvestmentRow();
-
-        autoResizeAllTextareas();
-        $('#company-suggestions').hide();
-    }
 
     async function loadCompanyData() {
         try {
@@ -191,15 +163,19 @@ $(document).ready(function () {
 
             if (isNew) {
                 // 신규 작성 시 기본값 설정
-                setMgmtStatusChip('발굴 기업');
+                setMgmtStatusChip('발굴기업');
                 
                 // 신규 작성 시 현재 사용자 정보를 작성자(공유) 및 열람자로 표시
                 const currentUser = userMap[user_id] || DEFAULT_MANAGER;
                 renderUserCard($('#memo-author-card'), currentUser);
                 
-                $('#memo-update-date').text(`작성 일시: ${new Date().toLocaleDateString('ko-KR')}`);
+                const d = new Date();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                $('#memo-update-date').text(`작성 일시: ${d.getFullYear()}.${mm}.${dd}`);
                 
                 hideLoader();
+                $('body').removeClass('is-loading');
                 return;
             }
 
@@ -213,15 +189,26 @@ $(document).ready(function () {
             }
 
             currentCompanyData = company;
+            const isOwner = company && user_id && String(company.user_id) === String(user_id);
+
             
             // UI 업데이트
             $notebookTitleText.text(company.name || '제목 없음');
             document.title = (company.name || '기업') + ' - DealBook';
             
             $summaryText.val(company.summary || '');
-            $industryText.val(company.industry || '기타').trigger('change');
-            if (company.industry && company.industry.startsWith('기타: ')) {
-                $('#industry-other').val(company.industry.replace('기타: ', ''));
+            const rawIndustry = company.industry || '';
+            if (rawIndustry.startsWith('기타: ')) {
+                $industryText.val('기타').trigger('change');
+                $('#industry-other').val(rawIndustry.replace('기타: ', '')).show();
+            } else {
+                $industryText.val(rawIndustry).trigger('change');
+            }
+
+            if (rawIndustry) {
+                $industryText.css('color', '#1e293b'); // 저장된 값이 있으면 검은색
+            } else {
+                $industryText.css('color', '#94a3b8'); // 값이 없으면 초기 회색
             }
 
             $('#ceo-name').val(company.ceo_name || '');
@@ -238,7 +225,9 @@ $(document).ready(function () {
             // 재무 정보 행 생성
             $('#financial-rows').empty();
             if (company.financial_info && Array.isArray(company.financial_info)) {
-                company.financial_info.forEach(f => {
+                // 최신 연도가 상단에 오도록 내림차순 정렬
+                const sortedFin = [...company.financial_info].sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
+                sortedFin.forEach(f => {
                     createFinancialRow(f.year, f.revenue, f.profit, f.net_profit);
                 });
             }
@@ -247,11 +236,19 @@ $(document).ready(function () {
             // 투자 정보 행 생성
             $('#investment-rows').empty();
             if (company.investment_info && Array.isArray(company.investment_info)) {
-                company.investment_info.forEach(i => {
+                // 최신 연도가 상단에 오도록 내림차순 정렬
+                const sortedInv = [...company.investment_info].sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
+                sortedInv.forEach(i => {
                     createInvestmentRow(i.year, i.stage, i.valuation, i.amount, i.investor);
                 });
             }
             if ($('#investment-rows').children().length === 0) createInvestmentRow();
+
+            // 신규 필드 반영 [New]
+            $('#key-products').val(company.key_products || '');
+            $('#private-memo').val(company.private_memo || '');
+            
+
 
             // 작성자/열람자 정보 반영
             const author = userMap[company.user_id] || DEFAULT_MANAGER;
@@ -261,24 +258,50 @@ $(document).ready(function () {
 
             if (company.updated_at || company.created_at) {
                 const date = new Date(company.updated_at || company.created_at);
-                $('#memo-update-date').text(`최종 업데이트: ${date.toLocaleDateString('ko-KR')} ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`);
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                const hh = String(date.getHours()).padStart(2, '0');
+                const min = String(date.getMinutes()).padStart(2, '0');
+                $('#memo-update-date').text(`최종 업데이트: ${date.getFullYear()}.${mm}.${dd} ${hh}:${min}`);
             }
 
             // 채팅 기록 로드
-            if (company.history && Array.isArray(company.history)) {
+            if (company.history && Array.isArray(company.history) && company.history.length > 0) {
                 conversationHistory = company.history;
-                $chatMessages.empty();
+                $chatMessages.find('.message').remove();
                 $welcomeScreen.hide();
                 conversationHistory.forEach(msg => {
                     addMessage(msg.content, msg.role === 'assistant' ? 'ai' : 'user', false);
                 });
+                // 채팅 내역 로드 후 스크롤 최하단 이동
+                setTimeout(() => {
+                    $chatMessages.scrollTop($chatMessages[0].scrollHeight);
+                }, 100);
+            } else {
+                // 채팅 기록이 없으면 시작 화면 표시
+                $chatMessages.find('.message').remove();
+                $welcomeScreen.show();
             }
 
             autoResizeAllTextareas();
             
-            // 공유/조회 모드 처리
-            const isOwner = company.user_id && String(company.user_id) === String(user_id);
-            if (fromSource === 'totalstartup' || fromSource === 'total_companies' || fromSource === 'shared' || (!isNew && !isOwner)) {
+            // [Refactored] NDA 체크 (기업 페이지: 회원은 면제, 비회원은 필수)
+            const isMember = userData && userData.isLoggedIn;
+            if (!isMember) {
+                const isSigned = await checkNdaStatus(_supabase, companyId, user_id, 'company');
+                if (!isSigned) {
+                    initNdaGate(_supabase, companyId, 'company', userData, {
+                        fromSource,
+                        returnUrl: './shared_items.html',
+                        onSuccess: () => location.reload()
+                    });
+                    return;
+                }
+            }
+
+            const viewMode = urlParams.get('mode');
+
+            if (viewMode === 'read' || fromSource === 'totalstartup' || fromSource === 'total_companies' || fromSource === 'shared' || (!isNew && !isOwner)) {
                 applyReadOnlyMode();
             }
 
@@ -287,6 +310,7 @@ $(document).ready(function () {
             alert('데이터를 불러오는 중 오류가 발생했습니다.');
         } finally {
             hideLoader();
+            $('body').removeClass('is-loading');
         }
     }
 
@@ -311,15 +335,12 @@ $(document).ready(function () {
 
     function renderCompanyFiles() {
         $('#source-list-training').empty();
-        $('#source-list-finance').empty();
-        $('#source-list-non-training').empty();
 
         const companyFiles = availableFiles.filter(f => f.entity_id === companyId);
         
         companyFiles.forEach(file => {
-            const isTraining = file.source_type === 'training' || file.source_type === 'finance';
-            const isFinance = file.source_type === 'finance';
-            addFileToSourceList(file.file_name, file.id, file.storage_path, isTraining, isFinance);
+            // 모든 파일을 학습 데이터 목록으로 표시
+            addFileToSourceList(file.file_name, file.id, file.storage_path, true, false, file.parsedText);
         });
     }
 
@@ -354,55 +375,24 @@ $(document).ready(function () {
         setMgmtStatusChip($(this).data('value'));
     });
 
-    // [New] 기업명 입력 이벤트 (자동 완성)
-    $('#notebook-title-editor').on('input focus', function() {
-        if (!isNew) return; // 신규 작성 시에만 제안 표시
-
-        const query = $(this).text().trim().toLowerCase();
-        const $suggestions = $('#company-suggestions');
-
-        if (!query) {
-            $suggestions.hide();
-            return;
-        }
-
-        const filtered = myCompanies.filter(c => (c.name || "").toLowerCase().includes(query));
-
-        $suggestions.empty().show();
+    // [New] 산업군 '기타' 선택 시 입력 필드 토글 및 색상 변경
+    $('#industry').on('change', function() {
+        const val = $(this).val();
         
-        // "직접 입력" 옵션 상단 배치
-        const $directItem = $(`<div style="padding: 10px 16px; cursor: pointer; border-bottom: 2px solid #f1f5f9; font-size: 13px; color: #6366f1; font-weight: 600; background: #f8fafc;">
-                                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">edit</span> 직접 입력
-                             </div>`);
-        $directItem.on('click', () => { $suggestions.hide(); });
-        $suggestions.append($directItem);
-
-        if (filtered.length === 0) {
-            if (!query) $suggestions.hide();
-            return;
+        // 색상 변경 처리 (플레이스홀더 효과)
+        if (val) {
+            $(this).css('color', '#1e293b');
+        } else {
+            $(this).css('color', '#94a3b8');
         }
 
-        filtered.forEach(c => {
-            const $item = $(`<div style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 13px; transition: background 0.2s;">
-                                <div style="font-weight: 700; color: #1e293b;">${c.name}</div>
-                                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${c.industry || '-'} / ${c.ceo_name || '-'}</div>
-                             </div>`);
-            
-            $item.on('mouseenter', function() { $(this).css('background', '#f1f5f9'); });
-            $item.on('mouseleave', function() { $(this).css('background', 'white'); });
-            $item.on('click', () => {
-                fillCompanyFields(c);
-            });
-            $suggestions.append($item);
-        });
-    });
-
-    // 제안창 외부 클릭 시 닫기
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('#notebook-title-editor, #company-suggestions').length) {
-            $('#company-suggestions').hide();
+        if (val === '기타') {
+            $('#industry-other').fadeIn(200).focus();
+        } else {
+            $('#industry-other').hide().val('');
         }
     });
+
 
     function autoResizeTextarea($el) {
         if (!$el.length) return;
@@ -412,9 +402,16 @@ $(document).ready(function () {
 
     function autoResizeAllTextareas() {
         autoResizeTextarea($summaryText);
+        autoResizeTextarea($('#key-products'));
         autoResizeTextarea($('#financial-analysis'));
         autoResizeTextarea($('#manager-memo'));
+        autoResizeTextarea($('#private-memo'));
     }
+
+    // [New] 텍스트 입력 시 자동 높이 조절 연결
+    $(document).on('input', '#summary, #key-products, #financial-analysis, #manager-memo, #private-memo', function() {
+        autoResizeTextarea($(this));
+    });
 
     // 재무 정보 행 추가
     function createFinancialRow(year = '', revenue = '', profit = '', net = '') {
@@ -466,6 +463,9 @@ $(document).ready(function () {
         $('#investment-rows').append(rowHtml);
     }
 
+
+
+
     $(document).on('click', '.btn-remove-row', function() { $(this).parent().remove(); });
     $('#add-financial-btn').on('click', () => createFinancialRow());
     $('#add-investment-btn').on('click', () => createInvestmentRow());
@@ -485,16 +485,29 @@ $(document).ready(function () {
     // ==========================================
     async function saveCompany(isDraft = false) {
         const name = $notebookTitleText.text().trim();
-        if (!name || name === '제목 없음') { alert('기업명을 입력해주세요.'); return; }
-
-        const industryBase = $industryText.val();
-        const industry = industryBase === '기타' ? `기타: ${$('#industry-other').val()}` : industryBase;
-        
-        let status = $('.btn-status-chip.active').data('value');
-        if (status === '기타') {
-            const otherVal = $('#mgmt-status-other').val().trim();
-            status = otherVal ? `기타: ${otherVal}` : '기타';
+        if (!name || name === '제목 없음' || name === '') { 
+            alert('기업명을 입력해주세요.'); 
+            $notebookTitleText.focus();
+            return; 
         }
+
+        const industryResult = resolveIndustry($('#industry').val(), $('#industry-other').val());
+        if (industryResult.error) {
+            alert(industryResult.error);
+            $('#industry').focus();
+            return;
+        }
+        const industry = industryResult.value;
+
+        const statusResult = resolveMgmtStatus(
+            $('.btn-status-chip.active').data('value'),
+            $('#mgmt-status-other').val()
+        );
+        if (statusResult.error) {
+            alert(statusResult.error);
+            return;
+        }
+        const status = statusResult.value;
 
         // 재무 정보 수집
         const financial_info = [];
@@ -519,6 +532,9 @@ $(document).ready(function () {
             });
         });
 
+
+
+
         const payload = {
             name: name,
             industry: industry,
@@ -532,8 +548,12 @@ $(document).ready(function () {
             investment_info: investment_info,
             financial_analysis: $('#financial-analysis').val(),
             manager_memo: $('#manager-memo').val(),
+            key_products: $('#key-products').val(),
+            private_memo: $('#private-memo').val(),
+
             is_draft: isDraft,
             user_id: user_id,
+            history: conversationHistory,
             updated_at: new Date().toISOString()
         };
 
@@ -542,6 +562,14 @@ $(document).ready(function () {
             let result;
             if (isNew) {
                 result = await _supabase.from('companies').insert(payload).select().single();
+                if (!result.error && result.data && pendingFiles.length > 0) {
+                    const newId = result.data.id;
+                    const pendingIds = pendingFiles.map(f => f.id);
+                    await _supabase.from('files')
+                        .update({ entity_id: newId, entity_type: 'company' })
+                        .in('id', pendingIds);
+                    pendingFiles = [];
+                }
             } else {
                 result = await _supabase.from('companies').update(payload).eq('id', companyId).select().single();
             }
@@ -549,7 +577,7 @@ $(document).ready(function () {
             if (result.error) throw result.error;
             
             alert(isDraft ? '비공개로 저장되었습니다.' : '저장되었습니다.');
-            location.href = './my_companies.html';
+            location.href = returnUrl;
         } catch (err) {
             console.error('Save error:', err);
             alert('저장 중 오류가 발생했습니다.');
@@ -561,6 +589,150 @@ $(document).ready(function () {
     $('#btn-save').on('click', () => saveCompany(false));
     $('#btn-draft').on('click', () => saveCompany(true));
 
+    // [New] AI 자동 입력 기능
+    $('#ai-auto-fill-btn').on('click', async function() {
+        const trainingFiles = availableFiles.filter(f => f.entity_id === companyId || pendingFiles.some(pf => pf.id === f.id));
+        const contextText = trainingFiles
+            .filter(f => f.parsedText && !f.parsedText.startsWith('[텍스트 미추출'))
+            .map(f => `파일명: ${f.file_name}\n내용: ${f.parsedText}`)
+            .join('\n\n---\n\n');
+
+        if (!contextText) {
+            alert('분석할 수 있는 파일 내용이 없습니다. 먼저 텍스트가 포함된 분석 완료된 파일을 업로드해주세요.');
+            return;
+        }
+
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+        
+        // [수정] 분석 중 테마 활성화 모드 (CSS 클래스 기반)
+        $btn.prop('disabled', true)
+            .addClass('analyzing')
+            .html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 8px; color: #ffffff;"></span><span style="font-size: 14px; font-weight: 600; color: #ffffff;">분석 중...</span>');
+
+        try {
+            const prompt = `
+업로드된 기업 관련 문서 내용을 바탕으로 다음 정보를 추출하여 정확한 JSON 형식으로 답변해주세요.
+- name: 기업명
+- industry: 산업 분야 (가급적 드롭다운 목록에 있는 값으로 매핑: AI, IT·정보통신, SaaS·솔루션, 게임, 공공·국방, 관광·레저, 교육·에듀테크, 금융·핀테크, 농·임·어업, 라이프스타일, 모빌리티, 문화예술·콘텐츠, 바이오·헬스케어, 부동산, 뷰티·패션, 에너지·환경, 외식업·소상공인, 우주·항공, 유통·물류, 제조·건설, 플랫폼·커뮤니티 중 하나)
+- ceo_name: 대표자명
+- email: 이메일
+- establishment_date: 설립일자 (YYYY-MM-DD 형식)
+- address: 주소
+- summary: 회사소개 (300자 내외 요약)
+- key_products: 주요 제품/서비스 (핵심 기술 및 제품 라인업)
+- financial_info: [{ "year": "연도", "revenue": "매출액(숫자만)", "profit": "영업이익(숫자만)", "net_profit": "순이익(숫자만)" }]
+- investment_info: [{ "year": "연도", "stage": "단계", "valuation": "벨류(숫자만)", "amount": "금액(숫자만)", "investor": "투자자" }]
+- financial_analysis: 재무제표 성장성 및 수익성 분석 코멘트 (매출 증가 추이, 영업이익률 변화 등을 포함하여 상세히 기술)
+
+**주의사항**:
+1. "담당자 의견(manager_memo)"은 절대 포함하지 마세요.
+2. 금액이나 숫자는 단위 구분 쉼표 없이 숫자만 추출하세요. (예: 1,000,000 -> 1000000)
+3. 알 수 없는 정보는 빈 문자열("") 또는 빈 배열([])로 반환하세요.
+4. 반드시 유효한 JSON 형식으로만 답변하세요. 다른 설명은 생략하세요.
+            `.trim();
+
+            console.log('🤖 AI 자동 입력 분석 시작...');
+            const response = await addAiResponse(prompt, contextText);
+            const data = await response.json();
+            
+            let resultText = data.answer || data.text || data.response || "";
+            
+            // JSON 추출 시도 (Markdown 펜스 또는 순수 { } 블록)
+            let jsonString = '';
+            const markdownMatch = resultText.match(/```json\n?([\s\S]*?)\n?```/);
+            
+            if (markdownMatch) {
+                jsonString = markdownMatch[1].trim();
+            } else {
+                const curlyMatch = resultText.match(/\{[\s\S]*\}/);
+                if (curlyMatch) {
+                    jsonString = curlyMatch[0].trim();
+                }
+            }
+
+            if (!jsonString) {
+                console.error('❌ AI 응답에서 JSON을 찾을 수 없습니다. 원본 응답:', resultText);
+                throw new Error('AI로부터 유효한 JSON 형식을 받지 못했습니다. 콘솔 로그를 확인해주세요.');
+            }
+
+            let jsonData;
+            try {
+                jsonData = JSON.parse(jsonString);
+            } catch (pErr) {
+                console.warn('⚠️ JSON 파싱 1차 실패. 복구를 시도합니다...');
+                try {
+                    // 잘린 JSON 복구 시도 (닫히지 않은 괄호 강제 삽입)
+                    const repairedJson = tryRepairJson(jsonString);
+                    jsonData = JSON.parse(repairedJson);
+                    console.log('✅ JSON 복구 성공:', jsonData);
+                } catch (rErr) {
+                    console.error('❌ JSON 복구 및 파싱 최종 실패. 추출된 문자열:', jsonString);
+                    throw new Error('AI 응답이 도중에 끊겼거나 형식이 올바르지 않습니다. (추출 실패)');
+                }
+            }
+            
+            console.log('🤖 AI 추출 데이터:', jsonData);
+
+            // 데이터 UI 매핑
+            if (jsonData.name) $('#notebook-title-editor').text(jsonData.name);
+            
+            if (jsonData.industry) {
+                const industries = ["AI", "IT·정보통신", "SaaS·솔루션", "게임", "공공·국방", "관광·레저", "교육·에듀테크", "금융·핀테크", "농·임·어업", "라이프스타일", "모빌리티", "문화예술·콘텐츠", "바이오·헬스케어", "부동산", "뷰티·패션", "에너지·환경", "외식업·소상공인", "우주·항공", "유통·물류", "제조·건설", "플랫폼·커뮤니티"];
+                if (industries.includes(jsonData.industry)) {
+                    $('#industry').val(jsonData.industry).trigger('change');
+                } else {
+                    $('#industry').val('기타').trigger('change');
+                    $('#industry-other').val(jsonData.industry);
+                }
+            }
+
+            if (jsonData.ceo_name) $('#ceo-name').val(jsonData.ceo_name);
+            if (jsonData.email) $('#company-email').val(jsonData.email);
+            if (jsonData.establishment_date) $('#establishment-date').val(jsonData.establishment_date);
+            if (jsonData.address) $('#company-address').val(jsonData.address);
+            if (jsonData.summary) $('#summary').val(jsonData.summary);
+            if (jsonData.key_products) $('#key-products').val(jsonData.key_products);
+            if (jsonData.financial_analysis) $('#financial-analysis').val(jsonData.financial_analysis);
+
+            // 재무 정보 (기존 행이 비어있으면 교체, 데이터 있으면 추가)
+            if (jsonData.financial_info && Array.isArray(jsonData.financial_info) && jsonData.financial_info.length > 0) {
+                $('#financial-rows').empty();
+                jsonData.financial_info.forEach(f => {
+                    createFinancialRow(f.year, f.revenue, f.profit, f.net_profit);
+                });
+            }
+
+            // 투자 정보
+            if (jsonData.investment_info && Array.isArray(jsonData.investment_info) && jsonData.investment_info.length > 0) {
+                $('#investment-rows').empty();
+                jsonData.investment_info.forEach(i => {
+                    createInvestmentRow(i.year, i.stage, i.valuation, i.amount, i.investor);
+                });
+            }
+
+            // 숫자 포맷팅 강제 트리거
+            $('.format-number').trigger('input');
+            autoResizeAllTextareas();
+            
+            alert('AI가 파일 내용을 분석하여 정보를 자동으로 입력했습니다.');
+
+        } catch (err) {
+            console.error('AI Auto-fill Error:', err);
+            const errMsg = err.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                markModelAsExceeded(currentModelId);
+                alert('⚠️ AI 요청 한도를 초과했습니다.\n해당 모델의 상담이 제한되었습니다. 다른 모델을 선택해 주세요.');
+            } else {
+                alert('분석 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 형식'));
+            }
+        } finally {
+            $btn.prop('disabled', false)
+                .removeClass('analyzing')
+                .html(originalHtml);
+        }
+    });
+
     $('#btn-delete-company').on('click', async function() {
         if (!confirm('정말로 이 기업 정보를 삭제하시겠습니까?')) return;
         showLoader();
@@ -568,7 +740,7 @@ $(document).ready(function () {
             const { error } = await _supabase.from('companies').update({ deleted_at: new Date().toISOString() }).eq('id', companyId);
             if (error) throw error;
             alert('삭제되었습니다.');
-            location.href = './my_companies.html';
+            location.href = returnUrl;
         } catch (err) {
             alert('삭제 중 오류가 발생했습니다.');
         } finally {
@@ -583,15 +755,20 @@ $(document).ready(function () {
         $welcomeScreen.hide();
         const isAi = sender === 'ai';
         const msgHtml = `
-            <div class="message ${sender} mb-3 d-flex ${isAi ? '' : 'flex-row-reverse'}">
-                <div class="avatar bg-${isAi ? 'light' : 'primary'} text-${isAi ? 'dark' : 'white'} rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                    <span class="material-symbols-outlined">${isAi ? 'smart_toy' : 'person'}</span>
+            <div class="message ${sender}">
+                <div class="message-avatar">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">${isAi ? 'smart_toy' : 'person'}</span>
                 </div>
-                <div class="message-content mx-2 p-2 rounded bg-light" style="max-width: 80%; white-space: pre-wrap;">${text}</div>
+                <div class="message-content">${escapeForDisplay(text)}</div>
             </div>
         `;
         $chatMessages.append(msgHtml);
-        if (animate) $chatMessages.scrollTop($chatMessages[0].scrollHeight);
+        
+        if (animate) {
+            setTimeout(() => {
+                $chatMessages.scrollTop($chatMessages[0].scrollHeight);
+            }, 50);
+        }
     }
 
     async function sendMessage() {
@@ -600,55 +777,165 @@ $(document).ready(function () {
         $chatInput.val('').css('height', 'auto');
         addMessage(text, 'user');
         
-        const $aiMsg = $('<div class="message ai mb-2">답변 생성 중...</div>');
-        $chatMessages.append($aiMsg);
+        // AI 타이핑 표시기 추가
+        const $typingMsg = $(`
+            <div class="message ai typing-indicator">
+                <div class="message-avatar">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">smart_toy</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        `);
+        $chatMessages.append($typingMsg);
+        setTimeout(() => {
+            $chatMessages.scrollTop($chatMessages[0].scrollHeight);
+        }, 50);
 
         try {
             let ragContext = "";
-            if (!isNew) {
-                ragContext = await searchVectorDB(text, companyId);
+            if (!isNew && companyId) {
+                try {
+                    ragContext = await searchVectorDB(text, companyId) || "";
+                } catch (vecErr) {
+                    console.warn('Vector search failed (non-fatal):', vecErr);
+                }
             }
 
-            const context = `기업명: ${$notebookTitleText.text()}\n분야: ${$industryText.val()}\n요약: ${$summaryText.val()}\n재무분석: ${$('#financial-analysis').val()}\n참고문서:\n${ragContext}`;
+            // UI 데이터(재무/투자)를 배열로 수집 후 순수 함수로 텍스트 변환
+            const financialRows = [];
+            $('.financial-row').each(function() {
+                financialRows.push({
+                    year:    $(this).find('.fin-year').val(),
+                    revenue: $(this).find('.fin-revenue').val(),
+                    profit:  $(this).find('.fin-profit').val(),
+                    net:     $(this).find('.fin-net').val(),
+                });
+            });
+
+            const investmentRows = [];
+            $('.investment-row').each(function() {
+                investmentRows.push({
+                    year:      $(this).find('.inv-year').val(),
+                    stage:     $(this).find('.inv-stage').val(),
+                    valuation: $(this).find('.inv-valuation').val(),
+                    amount:    $(this).find('.inv-amount').val(),
+                    investor:  $(this).find('.inv-investor').val(),
+                });
+            });
+
+            const context = buildChatContext({
+                name:             $notebookTitleText.text(),
+                industry:         $industryText.val(),
+                summary:          $summaryText.val(),
+                financialStr:     buildFinancialString(financialRows),
+                investmentStr:    buildInvestmentString(investmentRows),
+                financialAnalysis: $('#financial-analysis').val(),
+                managerMemo:      $('#manager-memo').val(),
+                ragContext,
+            });
             
+            console.log('🤖 AI 요청 전송 중...');
             const response = await addAiResponse(text, context);
             const data = await response.json();
-            const answer = data.answer || '죄송합니다. 답변을 생성하지 못했습니다.';
+            console.log('🤖 AI 응답 수신:', data);
             
-            $aiMsg.remove();
+            const answer = data.answer || data.text || data.response || '죄송합니다. 답변을 생성하지 못했습니다.';
+            
+            $typingMsg.remove();
             addMessage(answer, 'ai');
             
             conversationHistory.push({ role: 'user', content: text });
             conversationHistory.push({ role: 'assistant', content: answer });
 
-            if (!isNew) {
+            if (!isNew && companyId) {
                 await _supabase.from('companies').update({ history: conversationHistory }).eq('id', companyId);
             }
         } catch (err) {
-            $aiMsg.text('오류가 발생했습니다.');
+            console.error('❌ AI 채팅 오류:', err);
+            $typingMsg.remove();
+            const errMsg = err.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                markModelAsExceeded(currentModelId);
+                addMessage('⚠️ 선택하신 AI 모델의 요청 한도가 초과되었습니다. 다른 모델을 선택하여 다시 질문해 주세요.', 'ai');
+            } else {
+                addMessage(`오류가 발생했습니다: ${errMsg || '알 수 없는 오류'}`, 'ai');
+            }
         }
     }
 
+    // [New] 잘린 JSON 복구 함수
     $('#send-btn').on('click', sendMessage);
     $chatInput.on('keypress', e => { if (e.which === 13 && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+    $('#clear-history-btn').on('click', async function() {
+        if (!confirm('대화 기록을 모두 삭제하시겠습니까?')) return;
+        conversationHistory = [];
+        $chatMessages.find('.message').remove();
+        $welcomeScreen.show();
+        
+        if (!isNew && companyId) {
+            await _supabase.from('companies').update({ history: [] }).eq('id', companyId);
+        }
+    });
+
+    $(document).on('click', '.prompt-chip', function() {
+        const text = $(this).text();
+        $chatInput.val(text);
+        sendMessage();
+    });
 
     // ==========================================
     // 파일 업로드 및 관리
     // ==========================================
-    function addFileToSourceList(name, id, location, isTraining, isFinance) {
-        let target = isFinance ? '#source-list-finance' : (isTraining ? '#source-list-training' : '#source-list-non-training');
+    let pendingFiles = [];
+
+    function addFileToSourceList(name, id, location, isTraining, isFinance, parsedTextValue = null, status = null) {
+        let target = '#source-list-training';
         const fileUrl = location ? (location.startsWith('http') ? location : (SUPABASE_STORAGE_URL + location)) : '#';
         
+        // AI 검색 반영 여부 판단
+        const isSearchable = parsedTextValue && !parsedTextValue.startsWith('[텍스트 미추출');
+        
+        // status가 없을 경우 parsedTextValue에 따라 자동 결정
+        if (!status) {
+            status = isSearchable ? 'reflected' : 'failed';
+        }
+
+        let badgeClass = '';
+        let badgeText = '';
+        let badgeTitle = '';
+
+        let badgeHtml = '';
+        if (status === 'loading') {
+            badgeHtml = `<span class="ai-status-badge badge-ai-loading" style="font-size: 10px; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; border: 1px solid #e2e8f0;">분석 중...</span>`;
+        } else if (status === 'reflected') {
+            badgeHtml = `<span class="ai-status-badge badge-ai-reflected" style="font-size: 10px; font-weight: 600; color: #8b5cf6; background: #f5f3ff; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; border: 1px solid #ddd6fe;">AI 반영됨</span>`;
+        } else {
+            badgeHtml = `<span class="ai-status-badge badge-ai-failed" style="font-size: 10px; font-weight: 600; color: #ef4444; background: #fee2e2; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; border: 1px solid #fecaca;">AI 불가</span>`;
+        }
+
         const item = $(`
-            <li class="list-group-item d-flex align-items-center justify-content-between py-1 px-2 border-0 bg-transparent">
-                <div class="d-flex align-items-center">
-                    <span class="material-symbols-outlined me-2" style="font-size: 18px;">description</span>
-                    <a href="${fileUrl}" target="_blank" class="text-decoration-none text-dark small text-truncate" style="max-width: 150px;">${name}</a>
+            <li class="list-group-item d-flex align-items-center justify-content-between bg-transparent" style="padding: 10px 16px !important; margin: 0 !important; border-bottom: 1px solid #f1f5f9 !important; border-top: none !important; border-left: none !important; border-right: none !important;">
+                <div class="d-flex align-items-center overflow-hidden" style="flex: 1; min-width: 0; gap: 8px;">
+                    ${badgeHtml}
+                    <a href="${fileUrl}" target="_blank" class="text-decoration-none text-dark small text-truncate file-link" style="font-size: 13px; color: #334155 !important; flex: 1; min-width: 0;">${name}</a>
                 </div>
-                <button class="btn btn-link text-danger p-0 delete-file" data-id="${id}"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>
+                <button class="delete-file ms-2" data-id="${id}" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity 0.2s;"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>
             </li>
         `);
         $(target).append(item);
+        
+        // 버튼 호버 효과 추가
+        item.find('.delete-file').hover(
+            function() { $(this).css('opacity', '1'); },
+            function() { $(this).css('opacity', '0.7'); }
+        );
+
+        return item;
     }
 
     $(document).on('click', '.delete-file', async function() {
@@ -661,35 +948,88 @@ $(document).ready(function () {
     });
 
     $('#add-source-training').on('click', () => { currentSourceType = 'training'; $('#file-upload').click(); });
-    $('#add-source-finance').on('click', () => { currentSourceType = 'finance'; $('#file-upload').click(); });
     $('#add-source-non-training').on('click', () => { currentSourceType = 'non-training'; $('#file-upload').click(); });
 
-    $('#file-upload').on('change', async function() {
-        const files = this.files;
-        if (!files.length) return;
+    async function handleFileUpload(files) {
+        if (!files || !files.length) return;
+        
         for (const file of files) {
             if (!filetypecheck(file)) continue;
+            
+            // 1. 임시 로딩 항목 추가
+            const $tempItem = addFileToSourceList(file.name, 'pending-' + Date.now(), null, true, false, null, 'loading');
+            
             try {
-                const uploadResult = await fileUpload(file, user_id, SUPABASE_ENDPOINT);
-                if (uploadResult && uploadResult.key) {
-                    const isTraining = currentSourceType === 'training' || currentSourceType === 'finance';
-                    const isFinance = currentSourceType === 'finance';
+                // isNew 시 companyId='new' 문자열이 아닌 null을 명시적으로 전달
+                const uploadResult = await fileUpload(file, user_id, isNew ? null : companyId);
+                
+                const uploadedFile = Array.isArray(uploadResult) ? uploadResult[0] : uploadResult;
+                
+                if (uploadedFile && uploadedFile.storage_path) {
+                    const isSearchable = uploadedFile.parsedText && !uploadedFile.parsedText.startsWith('[텍스트 미추출');
+                    const finalStatus = isSearchable ? 'reflected' : 'failed';
                     
-                    const { data, error } = await _supabase.from('files').insert({
-                        entity_id: companyId,
-                        entity_type: 'company',
-                        storage_path: uploadResult.key,
-                        file_name: file.name,
-                        file_type: file.type.split('/')[1] || 'bin',
-                        user_id: user_id,
-                        source_type: currentSourceType
-                    }).select().single();
+                    const badgeClass = finalStatus === 'reflected' ? 'badge-ai-reflected' : 'badge-ai-failed';
+                    const badgeText = finalStatus === 'reflected' ? 'AI 반영됨' : 'AI 미반영';
+                    const badgeTitle = finalStatus === 'reflected' ? 'AI 에이전트가 이 문서의 내용을 읽고 답변에 활용할 수 있습니다.' : '이미지 위주의 문서이거나 텍스트가 부족하여 AI 검색이 제한됩니다.';
                     
-                    if (data) addFileToSourceList(file.name, data.id, data.storage_path, isTraining, isFinance);
+                    const fileUrl = SUPABASE_STORAGE_URL + uploadedFile.storage_path;
+                    
+                    $tempItem.find('.file-link').attr('href', fileUrl);
+                    $tempItem.find('.ai-status-badge').removeClass('badge-ai-loading').addClass(badgeClass).text(badgeText).attr('title', badgeTitle);
+                    $tempItem.find('.delete-file').attr('data-id', uploadedFile.id);
+
+                    if (isNew) {
+                        pendingFiles.push({ id: uploadedFile.id });
+                    } else {
+                        if (uploadedFile.id) {
+                            await _supabase.from('files')
+                                .update({ entity_id: companyId, entity_type: 'company' })
+                                .eq('id', uploadedFile.id);
+                        }
+                    }
+                    availableFiles.push(uploadedFile);
+                } else {
+                    console.error('Upload failed: invalid response', uploadResult);
+                    $tempItem.remove();
+                    alert(`${file.name} 업로드에 실패했습니다.`);
                 }
-            } catch (err) { console.error('Upload Error:', err); }
+            } catch (err) { 
+                console.error('Upload Error:', err);
+                $tempItem.remove();
+            }
         }
+    }
+
+    $('#file-upload').on('change', function() {
+        handleFileUpload(this.files);
         this.value = '';
+    });
+
+    // 드래그 앤 드롭 이벤트 핸들러 추가
+    const $dropZone = $('#training-drop-zone');
+
+    $dropZone.on('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).addClass('drag-over');
+    });
+
+    $dropZone.on('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('drag-over');
+    });
+
+    $dropZone.on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('drag-over');
+        
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files);
+        }
     });
 
     // ==========================================
@@ -772,7 +1112,7 @@ $(document).ready(function () {
 
             /* 본문 영역 */
             .sidebar-nav {
-                padding: 10px 40px 10px 40px !important;
+                padding: 10px 40px 40px 40px !important;
                 overflow-y: visible !important;
                 max-height: none !important;
                 height: auto !important;
@@ -1033,6 +1373,7 @@ $(document).ready(function () {
 
             /* 작성자 카드 강조 (전문 리포트용) */
             #memo-user-info-section {
+                display: flex !important;
                 margin-bottom: 0 !important;
             }
             .user-profile-card-oval {
@@ -1071,6 +1412,7 @@ $(document).ready(function () {
             #investment-section div[style*="background: #f1f5f9"],
             #financial-section div[style*="background: #f1f5f9"],
             .investment-row, .financial-row,
+            .private-memo-section,
             .sidebar > div:last-child {
                 display: none !important;
             }
@@ -1105,6 +1447,11 @@ $(document).ready(function () {
                 color: #10b981; /* Green checkmark */
             }
             
+            /* 리포트 모드에서 필수 항목 별표(*) 숨기기 */
+            .sidebar-nav p span[style*="color: #ef4444"] {
+                display: none !important;
+            }
+
             @media print {
                 body, html { overflow: visible !important; height: auto !important; }
                 .sidebar { width: 100% !important; border: none !important; box-shadow: none !important; }
@@ -1132,7 +1479,7 @@ $(document).ready(function () {
         $('input, select, textarea').prop('disabled', true);
 
         // textarea -> div 변환
-        ['#summary', '#financial-analysis', '#manager-memo'].forEach(function(sel) {
+        ['#summary', '#key-products', '#financial-analysis', '#manager-memo'].forEach(function(sel) {
             const $ta = $(sel);
             if (!$ta.length) return;
             const content = $ta.val() || '';
@@ -1144,11 +1491,17 @@ $(document).ready(function () {
             $div.text(content);
         });
 
-        // 산업 분야 텍스트화
+        // 산업 분야 텍스트화 (기타 일 경우 상세 입력값 반영)
         const $indSelect = $('#industry');
         const $indOther = $('#industry-other');
-        let industryText = $indSelect.val() === '기타' ? $indOther.val().trim() : $indSelect.find('option:selected').text();
-        if (!industryText || industryText === '선택해주세요') industryText = '-';
+        const selectedVal = $indSelect.val();
+        let industryText = '-';
+        
+        if (selectedVal === '기타') {
+            industryText = $indOther.val().trim() || '기타';
+        } else if (selectedVal) {
+            industryText = $indSelect.find('option:selected').text();
+        }
 
         let $indDiv = $indSelect.next('.report-text-content-industry');
         if (!$indDiv.length) {
@@ -1169,8 +1522,15 @@ $(document).ready(function () {
 
     function injectReportIcons() {
         const sections = [
+            { id: 'notebook-title-editor', label: '기업명', icon: 'business' },
+            { id: 'industry', label: '산업', icon: 'category' },
+            { id: 'ceo-name', label: '대표자명', icon: 'person' },
+            { id: 'company-email', label: '이메일', icon: 'mail' },
+            { id: 'establishment-date', label: '설립일자', icon: 'calendar_month' },
+            { id: 'company-address', label: '주소', icon: 'location_on' },
             { id: 'mgmt-status-group', label: '진행 상황', icon: 'account_tree' },
             { id: 'summary', parent: true, label: '상세 소개 및 요약', icon: 'description' },
+            { id: 'key-products', parent: true, label: '주요 제품/서비스', icon: 'inventory_2' },
             { id: 'investment-section', label: '투자 정보', icon: 'payments' },
             { id: 'financial-section', label: '재무 정보', icon: 'analytics' },
             { id: 'financial-analysis', parent: true, label: '재무 분석', icon: 'query_stats' },
@@ -1197,6 +1557,7 @@ $(document).ready(function () {
 
     // 테이블 레이아웃 정교화
     function reformatReportTables() {
+
         // 투자 정보 테이블
         const $invRows = $('#investment-rows');
         if ($invRows.length && !$invRows.parent('.report-table-wrapper').length) {
@@ -1290,6 +1651,6 @@ $(document).ready(function () {
         }
     }
 
+
     // 초기 데이터 로드 시작
-    loadMyCompanies();
 });

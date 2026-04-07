@@ -1,5 +1,7 @@
 import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatarUrl, DEFAULT_MANAGER } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
+import { initExternalSharing } from './sharing_utils.js';
+import { escapeHtml } from './utils.js';
 
 // 수파베이스 클라이언트 초기화 통합
 const _supabase = window.supabaseClient || supabase.createClient(window.config.supabase.url, window.config.supabase.anonKey);
@@ -15,18 +17,8 @@ let filteredCompanies = [];
 let currentuser_id = null;
 let currentSort = 'latest';
 
-let shareTargetCompanyId = null;
+window.currentShareCompanyId = null;
 let selectedReceivers = [];
-
-function escapeHtml(unsafe) {
-    if (!unsafe && unsafe !== 0) return "";
-    return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
 
 $(document).ready(function () {
     const userData = checkAuth();
@@ -38,16 +30,9 @@ $(document).ready(function () {
 
     loadCompanies(user_id);
 
-    $('#search-btn').on('click', () => { currentPage = 1; applyFilters(); });
+    $('#search-icon-btn').on('click', () => { currentPage = 1; applyFilters(); });
     $('#search-input').on('keypress', (e) => {
         if (e.which === 13) { currentPage = 1; applyFilters(); }
-    });
-
-    $('#filter-toggle-btn').on('click', function () {
-        const $container = $('#filter-container');
-        const isVisible = $container.is(':visible');
-        $container.slideToggle();
-        $(this).toggleClass('active', !isVisible);
     });
 
     $(document).on('change', '.industry-checkbox, .mgmt-checkbox, .visibility-checkbox', () => {
@@ -89,6 +74,9 @@ $(document).ready(function () {
 
     $('#export-csv-btn').on('click', exportToCSV);
 
+    // 외부 공유 및 단순 URL 복사 초기화
+    initExternalSharing('company', '#1A73E8');
+
     // --- Share Logic ---
     $('#share-user-search').on('input', function() {
         const keyword = $(this).val().toLowerCase().trim();
@@ -115,12 +103,11 @@ $(document).ready(function () {
         $('#user-search-results').hide();
     });
 
-    $('#btn-submit-share').on('click', async function() {
-        if (selectedReceivers.length === 0) { alert('공유할 대상을 1명 이상 선택해 주세요.'); return; }
+    $('#btn-submit-share').on('click', async function () {
+        if (selectedReceivers.length === 0) { alert('공유할 타인을 한 명 이상 선택해 주세요.'); return; }
         const memo = $('#share-memo').val().trim();
         const btn = this;
         $(btn).prop('disabled', true).text('전송 중...');
-
         const selectedFileIds = [];
         $('.share-file-checkbox:checked').each(function() {
             selectedFileIds.push($(this).val());
@@ -131,7 +118,7 @@ $(document).ready(function () {
                 table: 'shares',
                 action: 'create',
                 item_type: 'company',
-                item_id: shareTargetCompanyId,
+                item_id: window.currentShareCompanyId,
                 sender_id: currentuser_id,
                 receiver_id: uid,
                 memo: memo,
@@ -143,28 +130,23 @@ $(document).ready(function () {
             const errs = results.filter(r => r.error);
             if (errs.length > 0) alert(`${errs.length}건의 공유 중 오류 발생.`);
             else {
-                alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
+                alert(`${selectedReceivers.length}명의 팀원에게 공유되었습니다.`);
                 bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
             }
-        }).catch(e => { 
-            console.error('Share Error', e); 
-            alert('공유 요청 실패: ' + (e.message || '알 수 없는 오류')); 
-        })
-        .finally(() => $(btn).prop('disabled', false).text('보내기'));
+        }).catch(e => {
+            console.error('Share Error', e);
+            alert('공유 요청 실패: ' + (e.message || '알 수 없는 오류'));
+        }).finally(() => $(btn).prop('disabled', false).text('보내기'));
     });
 
-    $('#btn-share-with-user-trigger').on('click', function() {
-        bootstrap.Modal.getInstance(document.getElementById('share-options-modal')).hide();
-        const modal = new bootstrap.Modal(document.getElementById('share-modal'));
-        modal.show();
-    });
+    $('#btn-share-with-user-trigger').on('click', function () {
+        const modalEl = document.getElementById('share-options-modal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
 
-    $('#btn-share-url').on('click', function() {
-        const url = `${window.location.origin}/html/dealbook_companies.html?id=${shareTargetCompanyId}&from=mystartup`;
-        navigator.clipboard.writeText(url).then(() => {
-            alert('URL이 클립보드에 복사되었습니다.');
-            bootstrap.Modal.getInstance(document.getElementById('share-options-modal')).hide();
-        });
+        const shareModalEl = document.getElementById('share-modal');
+        const shareModal = new bootstrap.Modal(shareModalEl);
+        shareModal.show();
     });
 });
 
@@ -176,8 +158,8 @@ async function fetchFiles(companyId) {
         const { data, error } = await _supabase
             .from('files')
             .select('*')
-            .eq('company_id', companyId)
-            .is('deleted_at', null);
+            .eq('entity_type', 'company')
+            .eq('entity_id', companyId);
 
         if (error) throw error;
 
@@ -324,127 +306,143 @@ function renderCompanies() {
     const items = filteredCompanies.slice(start, end);
 
     items.forEach(c => {
-        const date = new Date(c.updated_at || c.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
+        const d = new Date(c.updated_at || c.created_at);
+        const date = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
         const authorData = userMap[c.user_id] || DEFAULT_MANAGER;
         const metrics = getLatestMetrics(c);
         
-        $container.append(`<tr onclick="showCompanyDetail('${c.id}')" style="cursor: pointer;">
+        $container.append(`<tr onclick="goToCompanyDetail('${c.id}')" style="cursor: pointer;">
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width: 36px; height: 36px; background: ${c.is_draft ? '#94a3b8' : '#1A73E8'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <span class="material-symbols-outlined" style="color: #ffffff; font-size: 20px;">${c.is_draft ? 'lock' : getIndustryIcon(c.industry)}</span>
+                <div class="d-flex align-items-center gap-3" style="min-width: 0;">
+                    <div style="width: 36px; height: 36px; background: ${c.is_draft ? '#e2e8f0' : '#1A73E8'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <span class="material-symbols-outlined" style="color: ${c.is_draft ? '#94a3b8' : '#ffffff'}; font-size: 20px;">${getIndustryIcon(c.industry)}</span>
                     </div>
-                    <span class="company-name-td text-truncate ${c.is_draft ? 'text-muted' : ''}" style="max-width: 140px;">${escapeHtml(c.company_name || c.name)}</span>
+                    <div style="flex: 1; min-width: 0;">
+                        <span class="fw-bold text-truncate" style="display:block;font-size:14px;color:${c.is_draft ? '#94a3b8' : 'inherit'};">${escapeHtml(c.company_name || c.name)}</span>
+                        ${c.is_draft ? `<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;color:#cbd5e1;margin-top:2px;"><span class="material-symbols-outlined" style="font-size:11px;">lock</span>비공개</span>` : ''}
+                    </div>
                 </div>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <span class="industry-tag-td" style="${c.is_draft ? 'background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0;' : ''}">${escapeHtml(c.industry || "기타")}</span>
+                <span class="industry-tag-td" style="background: ${c.is_draft ? '#f1f5f9' : '#eff6ff'}; color: ${c.is_draft ? '#94a3b8' : '#1a73e8'}; border: 1px solid ${c.is_draft ? '#e2e8f0' : '#dbeafe'};">${escapeHtml((c.industry || "기타").replace(/^기타:\s*/, ''))}</span>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;">
-                <div style="font-size: 13px; font-weight: 500; color: #1e293b;">
-                    ${metrics.revenue.value !== '-' ? `<span style="color: ${c.is_draft ? '#64748b' : '#000000'}; font-weight: 700;">${metrics.revenue.value}억</span>` : '-'}
+                <div style="font-size: 13px; font-weight: 500; color: ${c.is_draft ? '#94a3b8' : '#1e293b'};">
+                    ${metrics.revenue.value !== '-' ? `<span style="color: ${c.is_draft ? '#94a3b8' : '#000000'}; font-weight: 700;">${metrics.revenue.value}억</span>` : '-'}
                     ${metrics.revenue.year ? `<div style="font-size: 11px; color: #94a3b8; font-weight: 400; margin-top: 2px;">${metrics.revenue.year}</div>` : ''}
                 </div>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;">
-                <div style="font-size: 13px; font-weight: 500; color: #1e293b;">
-                    ${metrics.investment.value !== '-' ? `<span style="color: ${c.is_draft ? '#64748b' : '#000000'}; font-weight: 700;">${metrics.investment.value}억</span>` : '-'}
+                <div style="font-size: 13px; font-weight: 500; color: ${c.is_draft ? '#94a3b8' : '#1e293b'};">
+                    ${metrics.investment.value !== '-' ? `<span style="color: ${c.is_draft ? '#94a3b8' : '#000000'}; font-weight: 700;">${metrics.investment.value}억</span>` : '-'}
                     ${metrics.investment.year ? `<div style="font-size: 11px; color: #94a3b8; font-weight: 400; margin-top: 2px;">${metrics.investment.year}</div>` : ''}
                 </div>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <div class="summary-td" style="${c.is_draft ? 'color: #cbd5e1;' : ''}">${escapeHtml(c.summary)}</div>
-                ${c.mgmt_status ? `<div><span class="badge border" style="background: ${c.is_draft ? '#f8fafc' : '#f0f7ff'}; color: ${c.is_draft ? '#94a3b8' : '#1A73E8'}; border-color: ${c.is_draft ? '#e2e8f0' : '#dbeafe'} !important; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">#${escapeHtml(c.mgmt_status.replace(/\s+/g, ''))}</span></div>` : ''}
+                <div class="summary-td" style="color: #1A73E8; font-weight: 500;">${escapeHtml(c.private_memo || "-")}</div>
+                ${c.mgmt_status ? `<div><span class="mgmt-status-badge border" style="background: ${c.is_draft ? '#f8fafc' : '#f0f7ff'}; color: ${c.is_draft ? '#94a3b8' : '#1A73E8'}; border-color: ${c.is_draft ? '#e2e8f0' : '#dbeafe'} !important;">#${escapeHtml(c.mgmt_status.replace(/\s+/g, ''))}</span></div>` : ''}
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;" data-user-id="${c.user_id}" class="author-cell-clickable" onclick="event.stopPropagation(); if (window.showProfileModal) { window.showProfileModal('${c.user_id}'); }">
                 <div class="author-td">
-                    <img src="${resolveAvatarUrl(authorData.avatar || authorData.avatar_url, 1)}" class="author-avatar-sm">
+                    <img src="${resolveAvatarUrl(authorData.avatar || authorData.avatar_url, 1)}" class="author-avatar-sm" style="${c.is_draft ? 'filter: grayscale(1); opacity: 0.6;' : ''}">
                     <div class="author-info-wrap">
-                        <div class="author-name-td" style="color: #000000; font-weight: 700;">${escapeHtml(authorData.name)}</div>
-                        <div class="author-affiliation-td" style="margin-top: 2px;">${escapeHtml(authorData.affiliation)}</div>
+                        <div class="author-name-td" style="font-weight: 700; ${c.is_draft ? 'color: #94a3b8;' : 'color: #000000;'}">${escapeHtml(authorData.name)}</div>
+                        <div class="author-affiliation-td" style="margin-top: 2px; ${c.is_draft ? 'color: #cbd5e1;' : ''}">${escapeHtml(authorData.affiliation)}</div>
                     </div>
                 </div>
             </td>
-            <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; text-align: left !important; ${c.is_draft ? 'color: #cbd5e1;' : ''}">${date}</td>
+            <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; text-align: left !important; font-size: 13px; color: ${c.is_draft ? '#cbd5e1' : '#94a3b8'}; font-family: 'Outfit', sans-serif;">${date}</td>
             <td style="padding: 20px 24px !important;" onclick="event.stopPropagation();">
-                <button class="row-action-btn btn-hover-blue" onclick="openShareOptions('${c.id}')"><span class="material-symbols-outlined" style="font-size: 18px;">share</span></button>
+                <button class="row-action-btn btn-hover-blue" onclick="window.openShareOptions('${c.id}')"><span class="material-symbols-outlined" style="font-size: 18px;">share</span></button>
             </td>
         </tr>`);
     });
 }
-
-window.showCompanyDetail = function (id) {
-    const c = allCompanies.find(x => x.id === id);
-    if (!c) return;
-    const authorData = userMap[c.user_id] || DEFAULT_MANAGER;
-
-    $('#detail-company-icon').text(getIndustryIcon(c.industry));
-    $('#detail-company-name').text(c.company_name || c.name);
-    $('#detail-company-summary').text(c.summary);
-
-    const indContainer = $('#detail-industry-container').empty();
-    if (c.industry) indContainer.append(`<span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill" style="font-weight: 600; font-size: 13px;">#${escapeHtml(c.industry)}</span>`);
-
-    const createdDate = new Date(c.created_at);
-    const updatedDate = c.updated_at ? new Date(c.updated_at) : null;
-    const formatDate = (date) => date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-    const dateDisplay = (updatedDate && updatedDate.getTime() !== createdDate.getTime())
-        ? `최종 수정: ${formatDate(updatedDate)}`
-        : `등록일: ${formatDate(createdDate)}`;
-
-    $('#detail-author-name').text(authorData.name || '정보 없음').css('color', '#1e293b').css('font-weight', '700');
-    const authorSubInfo = authorData.affiliation || 'DealChat';
-    $('#detail-author-affiliation').text(authorSubInfo);
-    $('#detail-modified-date').text(dateDisplay);
-
-    const avatarUrl = resolveAvatarUrl(authorData.avatar || authorData.avatar_url, 1);
-    $('#detail-author-avatar').attr('src', avatarUrl);
-
-    // Profile modal link disabled (요청에 따라 제거)
-    $('#detail-author-info-box').css('cursor', 'default').off('click');
-
-    $('#go-to-dealbook').off('click').on('click', () => {
-        const $loader = $('#transition-loader');
-        $loader.css('display', 'flex');
-        setTimeout(() => {
-            location.href = `./dealbook_companies.html?id=${encodeURIComponent(id)}`;
-        }, 600);
-    });
-
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('company-detail-modal')).show();
+window.goToCompanyDetail = function (id) {
+    const $loader = $('#transition-loader');
+    $loader.css('display', 'flex');
+    setTimeout(() => {
+        location.href = `./dealbook_companies.html?id=${encodeURIComponent(id)}`;
+    }, 600);
 };
 
 window.openShareOptions = function (id) {
-    shareTargetCompanyId = id;
+    window.currentShareCompanyId = id;
     selectedReceivers = [];
     renderSelectedTags();
     $('#share-memo').val('');
     fetchFiles(id);
-    new bootstrap.Modal(document.getElementById('share-options-modal')).show();
+    const modalEl = document.getElementById('share-options-modal');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
+
+function submitShare(companyId, btnElement) {
+    const memo = $('#share-memo').val().trim();
+    if (selectedReceivers.length === 0) {
+        alert('공유할 대상을 한 명 이상 선택해 주세요.');
+        return;
+    }
+    const $btn = $(btnElement);
+    const originalText = $btn.text();
+    $btn.prop('disabled', true).text('전송 중...');
+
+    const selectedFileIds = $('.share-file-checkbox:checked').map(function() {
+        return $(this).val();
+    }).get();
+
+    const sharePromises = selectedReceivers.map(uid => {
+        return APIcall({
+            table: 'shares',
+            action: 'create',
+            item_type: 'company',
+            item_id: companyId,
+            sender_id: currentuser_id,
+            receiver_id: uid,
+            memo: memo,
+            file_ids: selectedFileIds,
+            is_read: false
+        }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json());
+    });
+
+    Promise.all(sharePromises).then(results => {
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) alert(`${errors.length}건의 공유 중 오류 발생.`);
+        else {
+            alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
+            bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
+        }
+    }).catch(e => {
+        console.error('Share Error', e);
+        alert('공유 실패: ' + (e.message || '알 수 없는 오류'));
+    }).finally(() => $btn.prop('disabled', false).text(originalText));
+}
+
+$(document).on('click', '#btn-submit-share', function () {
+    submitShare(window.currentShareCompanyId, this);
+});
 
 function renderPagination() {
     const $container = $('#pagination-container').empty();
     const total = Math.ceil(filteredCompanies.length / itemsPerPage);
-    if (total <= 1) return;
+    if (total < 1) return; // 0페이지인 경우만 숨김 (1페이지부터 표시)
+
     const prevD = currentPage === 1 ? 'disabled' : '';
     const nextD = currentPage === total ? 'disabled' : '';
     
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${prevD} onclick="changePage(1)" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">keyboard_double_arrow_left</span></button>`);
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${prevD} onclick="changePage(${currentPage - 1})" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span></button>`);
+    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
+    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
     
     let start = Math.max(1, currentPage - 2);
     let end = Math.min(total, start + 4);
     if (end - start < 4) start = Math.max(1, end - 4);
     
     for (let i = start; i <= end; i++) {
-        const activeStyle = i === currentPage ? 'background: #1A73E8; color: #ffffff; border-color: #1A73E8; font-weight: 600;' : 'background: #ffffff; color: #64748b; border-color: #e2e8f0;';
-        $container.append(`<button class="btn btn-outline-light pagination-btn" onclick="changePage(${i})" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 13px; ${activeStyle}">${i}</button>`);
+        const activeClass = i === currentPage ? 'active' : '';
+        $container.append(`<button class="pg-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`);
     }
     
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${nextD} onclick="changePage(${currentPage + 1})" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span></button>`);
-    $container.append(`<button class="btn btn-outline-light pagination-btn" ${nextD} onclick="changePage(${total})" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">keyboard_double_arrow_right</span></button>`);
+    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
+    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${total})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
 }
 
 window.changePage = function (p) {
@@ -494,7 +492,11 @@ function applyFilters() {
         });
         if (!matchesInd) return false;
 
-        const matchesMgmt = selectedMgmt.length === 0 || (c.mgmt_status && selectedMgmt.includes(c.mgmt_status));
+        const matchesMgmt = selectedMgmt.length === 0 || (c.mgmt_status && selectedMgmt.some(m => {
+            const normalizedStatus = c.mgmt_status.replace(/\s+/g, '');
+            const normalizedMatch = m.replace(/\s+/g, '');
+            return normalizedStatus === normalizedMatch;
+        }));
         if (!matchesMgmt) return false;
 
         // Visibility match - public (!is_draft), private (is_draft)
@@ -525,12 +527,20 @@ function applyFilters() {
 function applySort(type) {
     if (type === 'latest') {
         filteredCompanies.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
-    } else if (type === 'name') {
+    } else if (type === 'oldest') {
+        filteredCompanies.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at));
+    } else if (type === 'name_asc') {
         filteredCompanies.sort((a, b) => (a.company_name || a.name || "").localeCompare(b.company_name || b.name || "", 'ko-KR'));
-    } else if (type === 'revenue') {
-        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(b).revenue.value) || 0) - (parseFloat(getLatestMetrics(a).revenue.value) || 0));
-    } else if (type === 'investment') {
-        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(b).investment.value) || 0) - (parseFloat(getLatestMetrics(a).investment.value) || 0));
+    } else if (type === 'name_desc') {
+        filteredCompanies.sort((a, b) => (b.company_name || b.name || "").localeCompare(a.company_name || a.name || "", 'ko-KR'));
+    } else if (type === 'revenue_desc') {
+        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(b).revenue.value.replace(/,/g, '')) || 0) - (parseFloat(getLatestMetrics(a).revenue.value.replace(/,/g, '')) || 0));
+    } else if (type === 'revenue_asc') {
+        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(a).revenue.value.replace(/,/g, '')) || 0) - (parseFloat(getLatestMetrics(b).revenue.value.replace(/,/g, '')) || 0));
+    } else if (type === 'investment_desc') {
+        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(b).investment.value.replace(/,/g, '')) || 0) - (parseFloat(getLatestMetrics(a).investment.value.replace(/,/g, '')) || 0));
+    } else if (type === 'investment_asc') {
+        filteredCompanies.sort((a, b) => (parseFloat(getLatestMetrics(a).investment.value.replace(/,/g, '')) || 0) - (parseFloat(getLatestMetrics(b).investment.value.replace(/,/g, '')) || 0));
     }
     
     currentPage = 1;
@@ -574,15 +584,15 @@ function extractNumber(str) {
 
 function exportToCSV() {
     if (filteredCompanies.length === 0) { alert('데이터가 없습니다.'); return; }
-    const headers = ['기업명', '산업', '매출액(억)', '누적투자금(억)', '요약', '수정일'];
+    const headers = ['기업명', '산업', '매출액(억)', '누적투자금(억)', '비공개 메모', '등록일'];
     const rows = filteredCompanies.map(c => {
         const metrics = getLatestMetrics(c);
-        const summary = (c.summary || "").replace(/\n/g, ' ');
-        const date = new Date(c.updated_at || c.created_at).toLocaleDateString('ko-KR');
+        const memo = (c.private_memo || "").replace(/\n/g, ' ');
+        const date = (() => { const d = new Date(c.updated_at || c.created_at); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })();
         return [
             c.company_name || c.name, c.industry || "기타", 
             metrics.revenue.value || '0', metrics.investment.value || '0', 
-            summary, date
+            memo, date
         ].map(f => `"${String(f).replace(/"/g, '""')}"`);
     });
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

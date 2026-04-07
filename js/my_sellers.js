@@ -1,7 +1,7 @@
 import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatarUrl, DEFAULT_MANAGER } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
-
+import { escapeHtml } from './utils.js';
 
 // 수파베이스 클라이언트 초기화 통합
 const _supabase = window.supabaseClient || supabase.createClient(window.config.supabase.url, window.config.supabase.anonKey);
@@ -18,16 +18,6 @@ let currentuser_id = null;
 window.currentShareSellerId = null;
 let selectedReceivers = [];
 
-function escapeHtml(unsafe) {
-    if (!unsafe && unsafe !== 0) return "";
-    return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
 $(document).ready(function () {
     const userData = checkAuth();
     if (!userData) return;
@@ -38,15 +28,11 @@ $(document).ready(function () {
 
     loadInitialData(user_id);
 
-    $('#search-btn').on('click', () => { currentPage = 1; applyFilters(); });
+    $('#search-icon-btn').on('click', () => { currentPage = 1; applyFilters(); });
     $('#search-input').on('keypress', (e) => {
         if (e.which === 13) { currentPage = 1; applyFilters(); }
     });
 
-    $('#filter-toggle-btn').on('click', function () {
-        $('#filter-container').slideToggle();
-        $(this).toggleClass('active');
-    });
 
     $(document).on('change', '.industry-checkbox, .method-checkbox, .visibility-checkbox, .negotiable-checkbox', () => {
         currentPage = 1;
@@ -71,31 +57,114 @@ $(document).ready(function () {
         applySort($(this).data('sort'));
     });
 
-    // $('#btn-share-with-user-trigger').on('click', function () {
-    //     const modalEl = document.getElementById('share-options-modal');
-    //     const modal = bootstrap.Modal.getInstance(modalEl);
-    //     if (modal) modal.hide();
-    //
-    //     const shareModalEl = document.getElementById('share-modal');
-    //     const shareModal = new bootstrap.Modal(shareModalEl);
-    //     shareModal.show();
-    // });
+    $('#btn-share-with-user-trigger').on('click', function () {
+        const modalEl = document.getElementById('share-options-modal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        const shareModalEl = document.getElementById('share-modal');
+        const shareModal = new bootstrap.Modal(shareModalEl);
+        shareModal.show();
+    });
+
+    // --- Share User Search Logic ---
+    $('#share-user-search').on('input', function () {
+        const keyword = $(this).val().toLowerCase().trim();
+        const $results = $('#user-search-results');
+        if (!keyword) { $results.hide(); return; }
+        const matches = Object.entries(userMap)
+            .filter(([id, u]) => u.name.toLowerCase().includes(keyword) || (u.affiliation && u.affiliation.toLowerCase().includes(keyword)))
+            .slice(0, 10);
+        if (matches.length === 0) { $results.hide(); return; }
+        $results.empty().show();
+        matches.forEach(([id, u]) => {
+            $results.append(`<div class="p-3 border-bottom user-search-item" style="cursor: pointer; transition: background 0.2s;" data-id="${id}" data-name="${u.name}">
+                <div class="fw-bold" style="font-size: 14px; color: #1e293b;">${escapeHtml(u.name)}</div>
+                <div style="font-size: 11px; color: #64748b;">${escapeHtml(u.affiliation)}</div>
+            </div>`);
+        });
+    });
+
+    $(document).on('click', '.user-search-item', function () {
+        const user_id = $(this).data('id');
+        const userName = $(this).data('name');
+        addSelectedUser(user_id, userName);
+        $('#share-user-search').val('');
+        $('#user-search-results').hide();
+    });
+
+    $('#btn-submit-share').on('click', function () {
+        if (window.currentShareSellerId) {
+            submitShare(window.currentShareSellerId, this);
+        }
+    });
+
+function submitShare(sellerId, btnElement) {
+    const memo = $('#share-memo').val().trim();
+    if (selectedReceivers.length === 0) {
+        alert('공유할 대상을 한 명 이상 선택해 주세요.');
+        return;
+    }
+    const $btn = $(btnElement);
+    const originalText = $btn.text();
+    $btn.prop('disabled', true).text('전송 중...');
+
+    const selectedFileIds = $('.share-file-checkbox:checked').map(function() {
+        return $(this).val();
+    }).get();
+
+    const sharePromises = selectedReceivers.map(uid => {
+        return APIcall({
+            table: 'shares',
+            action: 'create',
+            item_type: 'seller',
+            item_id: sellerId,
+            sender_id: currentuser_id,
+            receiver_id: uid,
+            memo: memo,
+            file_ids: selectedFileIds,
+            is_read: false
+        }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json());
+    });
+
+    Promise.all(sharePromises).then(results => {
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) alert(`${errors.length}건의 공유 중 오류 발생.`);
+        else {
+            alert(`${selectedReceivers.length}명의 팀원에게 공유되었습니다.`);
+            bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
+        }
+    }).catch(e => {
+        console.error('Share Error', e);
+        alert('공유 요청 실패: ' + (e.message || '알 수 없는 오류'));
+    }).finally(() => $btn.prop('disabled', false).text(originalText));
+}
+
 
     // 외부 공유 및 단순 URL 복사 초기화
     initExternalSharing('seller', '#8b5cf6');
 });
 
 
-async function fetchFiles(companyId) {
+async function fetchFiles(companyId, sellerId) {
     const $fileList = $('#share-file-selection-list');
     $fileList.html('<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
 
     try {
-        const { data, error } = await _supabase
-            .from('files')
-            .select('*')
-            .eq('company_id', companyId)
-            .is('deleted_at', null);
+        let query = _supabase.from('files').select('*');
+        
+        if (companyId && sellerId) {
+            query = query.or(`and(entity_type.eq.company,entity_id.eq.${companyId}),and(entity_type.eq.seller,entity_id.eq.${sellerId})`);
+        } else if (companyId) {
+            query = query.eq('entity_id', companyId).eq('entity_type', 'company');
+        } else if (sellerId) {
+            query = query.eq('entity_id', sellerId).eq('entity_type', 'seller');
+        } else {
+            $fileList.html('<div class="text-muted p-1" style="font-size: 13px;">선택할 수 있는 파일이 없습니다.</div>');
+            return;
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -123,31 +192,6 @@ async function fetchFiles(companyId) {
     }
 }
 
-function addSelectedUser(id, name) {
-    if (selectedReceivers.includes(id)) return;
-    selectedReceivers.push(id);
-    renderSelectedTags();
-}
-
-function renderSelectedTags() {
-    const $container = $('#selected-users-container');
-    if (selectedReceivers.length === 0) {
-        $container.html('<span class="text-muted p-1" style="font-size: 13px;">이름으로 대상을 검색하세요.</span>');
-        return;
-    }
-    $container.empty();
-    selectedReceivers.forEach(uid => {
-        const u = userMap[uid] || { name: 'Unknown' };
-        const tag = $(`<span class="badge d-flex align-items-center gap-1 p-2" style="background: #eef2ff; color: #8b5cf6; border: 1px solid #8b5cf6; border-radius: 8px;">
-            ${escapeHtml(u.name)} <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;">close</span>
-        </span>`);
-        tag.find('span').on('click', () => {
-            selectedReceivers = selectedReceivers.filter(x => x !== uid);
-            renderSelectedTags();
-        });
-        $container.append(tag);
-    });
-}
 
 async function loadInitialData(user_id) {
     $('#seller-list-container').html('<tr><td colspan="8" class="text-center py-5">데이터 로딩 중...</td></tr>');
@@ -174,9 +218,9 @@ async function loadInitialData(user_id) {
         allSellers = (sellersRes.data || []).map(s => {
             const parsed = { ...s };
             parsed.company_name = s.company_name || s.name || s.companyName || (s.companies && s.companies.name) || "정보 없음";
-            parsed.industry = s.industry || (s.companies && s.companies.industry) || "기타";
-            parsed.summary = s.summary || (s.companies && s.companies.summary) || "";
-            return parsed;
+             parsed.industry = s.industry || (s.companies && s.companies.industry) || "기타";
+             parsed.summary = s.private_memo || s.summary || (s.companies && s.companies.summary) || "";
+             return parsed;
         });
 
         updateFilterOptions();
@@ -230,17 +274,21 @@ function renderSellers() {
     const pageItems = filteredSellers.slice(startIndex, startIndex + itemsPerPage);
 
     pageItems.forEach(seller => {
-        const date = new Date(seller.updated_at || seller.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
+        const d = new Date(seller.updated_at || seller.created_at);
+        const date = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
         const isDraft = seller.is_draft || false;
         const authorData = userMap[seller.user_id] || DEFAULT_MANAGER;
         const rowHtml = `
             <tr onclick="showSellerDetail('${seller.id}')" style="cursor: pointer;">
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                    <div class="d-flex align-items-center gap-3">
-                        <div style="width: 36px; height: 36px; background: ${isDraft ? '#94a3b8' : '#8b5cf6'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <span class="material-symbols-outlined" style="color: #ffffff; font-size: 20px;">${isDraft ? 'lock' : getIndustryIcon(seller.industry)}</span>
+                    <div class="d-flex align-items-center gap-3" style="min-width: 0;">
+                        <div style="width: 36px; height: 36px; background: ${isDraft ? '#e2e8f0' : '#8b5cf6'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <span class="material-symbols-outlined" style="color: ${isDraft ? '#94a3b8' : '#ffffff'}; font-size: 20px;">${getIndustryIcon(seller.industry)}</span>
                         </div>
-                        <span class="fw-bold text-truncate ${isDraft ? 'text-muted' : ''}" style="max-width: 140px;">${escapeHtml(seller.company_name)}</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <span class="fw-bold text-truncate" style="display:block;font-size:14px;color:${isDraft ? '#94a3b8' : 'inherit'};">${escapeHtml(seller.company_name)}</span>
+                            ${isDraft ? `<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;color:#cbd5e1;margin-top:2px;"><span class="material-symbols-outlined" style="font-size:11px;">lock</span>비공개</span>` : ''}
+                        </div>
                     </div>
                 </td>
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
@@ -255,18 +303,18 @@ function renderSellers() {
                     <span class="status-tag-td" style="background: ${isDraft ? '#f1f5f9' : '#f5f3ff'}; color: ${isDraft ? '#94a3b8' : '#8b5cf6'}; border: 1px solid ${isDraft ? '#e2e8f0' : '#ddd6fe'};">${escapeHtml(seller.status || "대기")}</span>
                 </td>
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                    <div class="summary-td" style="${isDraft ? 'color: #cbd5e1;' : ''}">${escapeHtml(seller.summary || "")}</div>
-                </td>
+                     <div class="summary-td" style="color: #8b5cf6; font-weight: 500; ${isDraft ? 'color: #cbd5e1 !important;' : ''}">${escapeHtml(seller.private_memo || "-")}</div>
+                 </td>
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;" data-user-id="${seller.user_id}" class="author-cell-clickable" onclick="event.stopPropagation(); if (window.showProfileModal) { window.showProfileModal('${seller.user_id}'); }">
                     <div class="author-td">
-                        <img src="${resolveAvatarUrl(authorData.avatar || authorData.avatar_url, 1)}" class="author-avatar-sm" style="${isDraft ? 'filter: grayscale(1); opacity: 0.6;' : ''}">
+                        <img src="${resolveAvatarUrl(authorData.avatar || authorData.avatar_url, 1)}" class="author-avatar-sm">
                         <div class="author-info-wrap">
-                            <div class="author-name-td" style="color: #000000; font-weight: 700; ${isDraft ? 'color: #94a3b8;' : ''}">${escapeHtml(authorData.name)}</div>
-                            <div class="author-affiliation-td" style="${isDraft ? 'color: #cbd5e1;' : ''}">${escapeHtml(authorData.affiliation)}</div>
+                            <div class="author-name-td" style="color: #000000; font-weight: 700;">${escapeHtml(authorData.name)}</div>
+                            <div class="author-affiliation-td">${escapeHtml(authorData.affiliation)}</div>
                         </div>
                     </div>
                 </td>
-                <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; font-size: 13px; color: #94a3b8;">${date}</td>
+                <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; font-size: 13px; color: #94a3b8; font-family: 'Outfit', sans-serif;">${date}</td>
                 <td style="padding: 20px 24px !important;" onclick="event.stopPropagation();">
                     <button class="row-action-btn btn-hover-purple" onclick="window.openShareModal('${seller.id}')"><span class="material-symbols-outlined" style="font-size: 18px;">share</span></button>
                 </td>
@@ -300,15 +348,10 @@ window.openShareModal = function (sellerId) {
     $('#ext-share-recipient').val('');
     $('#ext-share-org').val('');
     $('#ext-share-reason').val('');
-    $('#ext-share-result-area').hide();
 
-    // Fetch files associated with the seller's company
+    // Fetch files associated with the seller's company and the seller itself
     const companyId = seller.company_id || (seller.companies && seller.companies.id);
-    if (companyId) {
-        fetchFiles(companyId);
-    } else {
-        $('#share-file-selection-list').html('<div class="text-muted p-1" style="font-size: 13px;">연결된 기업 정보가 없어 파일을 불러올 수 없습니다.</div>');
-    }
+    fetchFiles(companyId, sellerId);
 
     const modalEl = document.getElementById('share-options-modal');
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -350,6 +393,32 @@ function updateFilterOptions() {
     });
 }
 
+function addSelectedUser(id, name) {
+    if (selectedReceivers.includes(id)) return;
+    selectedReceivers.push(id);
+    renderSelectedTags();
+}
+
+function renderSelectedTags() {
+    const $container = $('#selected-users-container');
+    if (selectedReceivers.length === 0) {
+        $container.html('<span class="text-muted p-1" style="font-size: 13px;">이름으로 팀원을 검색하세요.</span>');
+        return;
+    }
+    $container.empty();
+    selectedReceivers.forEach(uid => {
+        const u = userMap[uid] || { name: 'Unknown' };
+        const tag = $(`<span class="badge d-flex align-items-center gap-1 p-2" style="background: #ede9fe; color: #8b5cf6; border: 1px solid #8b5cf6; border-radius: 8px;">
+            ${escapeHtml(u.name)} <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;">close</span>
+        </span>`);
+        tag.find('span').on('click', () => {
+            selectedReceivers = selectedReceivers.filter(x => x !== uid);
+            renderSelectedTags();
+        });
+        $container.append(tag);
+    });
+}
+
 function applyFilters() {
     const keyword = ($('#search-input').val() || "").toLowerCase();
     const industries = $('.industry-checkbox:checked').map(function() { return this.value; }).get();
@@ -364,24 +433,35 @@ function applyFilters() {
 }
 
 function applySort(type) {
-    filteredSellers.sort((a, b) => {
-        if (type === 'name') return (a.company_name || "").localeCompare(b.company_name || "");
-        return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
-    });
+    if (type === 'latest') {
+        filteredSellers.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    } else if (type === 'oldest') {
+        filteredSellers.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at));
+    } else if (type === 'name_asc') {
+        filteredSellers.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "", 'ko-KR'));
+    } else if (type === 'name_desc') {
+        filteredSellers.sort((a, b) => (b.company_name || "").localeCompare(a.company_name || "", 'ko-KR'));
+    } else if (type === 'price_desc') {
+        filteredSellers.sort((a, b) => (parseFloat(String(b.matching_price || b.sale_price || 0).replace(/,/g, '')) || 0) - (parseFloat(String(a.matching_price || a.sale_price || 0).replace(/,/g, '')) || 0));
+    } else if (type === 'price_asc') {
+        filteredSellers.sort((a, b) => (parseFloat(String(a.matching_price || a.sale_price || 0).replace(/,/g, '')) || 0) - (parseFloat(String(b.matching_price || b.sale_price || 0).replace(/,/g, '')) || 0));
+    }
+    
+    currentPage = 1;
     renderSellers();
     renderPagination();
 }
 
 function exportToCSV() {
     if (filteredSellers.length === 0) { alert('데이터가 없습니다.'); return; }
-    const headers = ['매도자명', '산업', '희망가격', '상태', '요약', '등록일'];
-    const rows = filteredSellers.map(s => [
+     const headers = ['매도자명', '산업', '희망가격', '상태', '비공개 메모', '등록일'];
+     const rows = filteredSellers.map(s => [
         s.company_name || '',
         s.industry || '',
         s.matching_price || s.sale_price || '',
-        s.status || '',
-        s.summary || '',
-        new Date(s.created_at).toLocaleDateString()
+         s.status || '',
+         s.private_memo || s.summary || '',
+         (() => { const d = new Date(s.created_at); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })()
     ].map(field => `"${String(field).replace(/"/g, '""')}"`));
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

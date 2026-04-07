@@ -1,6 +1,7 @@
 import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatarUrl, DEFAULT_MANAGER } from './auth_utils.js';
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
+import { debounce, escapeHtml } from './utils.js';
 
 // 프로필 모달 스크립트 로드
 const script = document.createElement('script');
@@ -19,7 +20,7 @@ let userMap = {};
 let filteredBuyers = [];
 let currentuser_id = null;
 let currentUserData = null;
-let currentShareBuyerId = null;
+window.currentShareBuyerId = null;
 let selectedReceivers = [];
 let signedNdaIds = []; // Supabase에서 가져온 NDA 체결 ID 목록
 
@@ -46,17 +47,6 @@ function saveSignedNda(buyerId) {
     }
 }
 
-// Utility for HTML escaping
-function escapeHtml(unsafe) {
-    if (!unsafe && unsafe !== 0) return "";
-    return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
 $(document).ready(function () {
     currentUserData = checkAuth();
     if (!currentUserData) return;
@@ -72,39 +62,22 @@ $(document).ready(function () {
     // ==========================================
 
     // Search
-    $('#search-btn').on('click', () => { currentPage = 1; loadBuyers(); });
+    $('#search-icon-btn').on('click', () => { currentPage = 1; loadBuyers(); });
     $('#search-input').on('keypress', (e) => {
         if (e.which === 13) { currentPage = 1; loadBuyers(); }
     });
 
     // Filter Toggle
-    $('#filter-toggle-btn').on('click', function () {
-        const $container = $('#filter-container');
-        const isVisible = $container.is(':visible');
-        $container.slideToggle();
-        $(this).toggleClass('active', !isVisible);
-        if (!isVisible) {
-            $(this).css({
-                'background-color': '#0d9488',
-                'box-shadow': '0 4px 12px rgba(13, 148, 136, 0.2)'
-            }).find('span').css('color', 'white');
-        } else {
-            $(this).css({
-                'background-color': '#ffffff',
-                'box-shadow': '0 2px 8px rgba(0,0,0,0.05)'
-            }).find('span').css('color', '#64748b');
-        }
-    });
 
     // Filter Change Events
     $(document).on('change', '.industry-checkbox, .status-checkbox, .visibility-checkbox', () => {
         currentPage = 1;
         applyFilters();
     });
-    $('#filter-min-price, #filter-max-price').on('input', () => {
+    $('#filter-min-price, #filter-max-price').on('input', debounce(() => {
         currentPage = 1;
         applyFilters();
-    });
+    }, 300));
 
     // Reset Filters
     $('#reset-filters').on('click', function () {
@@ -200,6 +173,7 @@ $(document).ready(function () {
         shareModal.show();
     });
 
+    // 외부 공유 및 단순 URL 복사 초기화
     // 외부 공유 및 단순 URL 복사 초기화
     initExternalSharing('buyer', '#0d9488');
 
@@ -342,7 +316,7 @@ function renderBuyers() {
     container.empty();
 
     if (filteredBuyers.length === 0) {
-        container.html('<tr><td colspan="8" class="text-center py-5 text-muted">일치하는 바이어 정보가 없습니다.</td></tr>');
+        container.html('<tr><td colspan="8" class="text-center py-5 text-muted">일치하는 매수자 정보가 없습니다.</td></tr>');
         return;
     }
 
@@ -355,10 +329,8 @@ function renderBuyers() {
     pageItems.forEach(buyer => {
         const createdDate = new Date(buyer.created_at || Date.now());
         const updatedDate = buyer.updated_at ? new Date(buyer.updated_at) : null;
-        const formatDate = (date) => date.toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
-        const dateDisplay = (updatedDate && updatedDate.getTime() !== createdDate.getTime())
-            ? formatDate(updatedDate)
-            : formatDate(createdDate);
+        const d = (updatedDate && updatedDate.getTime() !== createdDate.getTime()) ? updatedDate : createdDate;
+        const dateDisplay = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
 
         const authorData = userMap[buyer.user_id] || DEFAULT_MANAGER;
 
@@ -371,11 +343,10 @@ function renderBuyers() {
             
         const industryStyle = isRestricted 
             ? "background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0;" 
-            : "background: #f0fdfa; color: #0d9488;";
+            : "background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1;";
 
-        const isOwner = String(buyer.user_id) === String(currentuser_id);
-        const localSigned = getSignedNdas();
-        const isSigned = signedNdaIds.includes(String(buyer.id)) || localSigned.includes(String(buyer.id));
+        const isOwner = !!(buyer.user_id && currentuser_id && String(buyer.user_id) === String(currentuser_id));
+        const isSigned = signedNdaIds.includes(String(buyer.id)) || signedNdas.includes(String(buyer.id));
         const isAuthorized = isOwner || isSigned;
         
         // [진행중/완료] 상태일 때 비공개 처리
@@ -398,11 +369,18 @@ function renderBuyers() {
         const rowHtml = `
             <tr onclick="showBuyerDetail('${buyer.id}')" style="cursor: pointer; ${isRestricted ? 'background-color: #fbfcfd;' : ''}">
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="company-icon-square" style="width: 36px; height: 36px; background: ${isRestricted ? '#cbd5e1' : '#0d9488'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(13, 148, 136, ${isRestricted ? '0.1' : '0.2'});">
-                            <span class="material-symbols-outlined" style="color: #ffffff; font-size: 20px;">${getIndustryIcon(buyer.industry)}</span>
+                    <div class="d-flex align-items-center gap-3" style="min-width: 0;">
+                        <div style="width: 36px; height: 36px; background: ${isRestricted ? '#94a3b8' : '#0d9488'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <span class="material-symbols-outlined" style="color: #ffffff; font-size: 20px;">${!isAuthorized ? 'lock' : getIndustryIcon(buyer.industry)}</span>
                         </div>
-                        <span class="seller-name-td" style="${isRestricted ? 'color: #94a3b8;' : ''}">${escapeHtml(displayName)}</span>
+                        <div style="flex: 1; min-width: 0;">
+                            ${!isAuthorized
+                                ? isRestricted
+                                    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#94a3b8;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:3px 10px;white-space:nowrap;"><span class="material-symbols-outlined" style="font-size:14px;">lock</span>NDA 필요</span>`
+                                    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#0d9488;background:#f0fdfa;border:1px solid #0d948833;border-radius:8px;padding:3px 10px;white-space:nowrap;"><span class="material-symbols-outlined" style="font-size:14px;">lock</span>NDA 필요</span>`
+                                : `<span class="fw-bold text-truncate" style="display: block; font-size: 14px; ${isRestricted ? 'color: #94a3b8;' : 'color: #1e293b;'}">${escapeHtml(displayName)}</span>`
+                            }
+                        </div>
                     </div>
                 </td>
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;">
@@ -426,10 +404,10 @@ function renderBuyers() {
                         </div>
                     </div>
                 </td>
-                <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important; ${isRestricted ? 'color: #94a3b8;' : ''}">${dateDisplay}</td>
+                <td class="date-td" style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important; font-size: 13px; color: #94a3b8; font-family: 'Outfit', sans-serif;">${dateDisplay}</td>
                 <td style="padding: 20px 24px !important; text-align: center !important; vertical-align: middle !important; white-space: nowrap;" onclick="event.stopPropagation();">
                     ${(isRestricted || !isAuthorized) ? '' : `
-                    <button class="row-action-btn" style="margin-left: 0;" title="바이어 공유하기" onclick="openShareModal('${buyer.id}')">
+                    <button class="row-action-btn" style="margin-left: 0;" title="매수자 공유하기" onclick="openShareModal('${buyer.id}')">
                         <span class="material-symbols-outlined" style="font-size: 18px;">share</span>
                     </button>
                     `}
@@ -451,13 +429,13 @@ window.showBuyerDetail = function (id) {
     const authorData = userMap[buyer.user_id] || DEFAULT_MANAGER;
     const createdDate = new Date(buyer.created_at || Date.now());
     const updatedDate = buyer.updated_at ? new Date(buyer.updated_at) : null;
-    const formatDate = (date) => date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    const d_detail = (updatedDate && updatedDate.getTime() !== createdDate.getTime()) ? updatedDate : createdDate;
     const dateDisplay = (updatedDate && updatedDate.getTime() !== createdDate.getTime())
-        ? `최종 수정: ${formatDate(updatedDate)}`
-        : `등록일: ${formatDate(createdDate)}`;
+        ? `최종 수정: ${d_detail.getFullYear()}.${String(d_detail.getMonth()+1).padStart(2,'0')}.${String(d_detail.getDate()).padStart(2,'0')} ${String(d_detail.getHours()).padStart(2,'0')}:${String(d_detail.getMinutes()).padStart(2,'0')}`
+        : `등록일: ${d_detail.getFullYear()}.${String(d_detail.getMonth()+1).padStart(2,'0')}.${String(d_detail.getDate()).padStart(2,'0')} ${String(d_detail.getHours()).padStart(2,'0')}:${String(d_detail.getMinutes()).padStart(2,'0')}`;
 
     const signedNdas = getSignedNdas();
-    const isOwner = String(buyer.user_id) === String(currentuser_id);
+    const isOwner = !!(buyer.user_id && currentuser_id && String(buyer.user_id) === String(currentuser_id));
     const localSigned = getSignedNdas();
     const isSigned = signedNdaIds.includes(String(buyer.id)) || localSigned.includes(String(buyer.id));
     const isAuthorized = isOwner || isSigned;
@@ -509,7 +487,7 @@ window.showBuyerDetail = function (id) {
     const industryContainer = $('#detail-industry-container');
     industryContainer.empty();
     if (buyer.industry) {
-        industryContainer.append(`<span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill" style="font-weight: 600; font-size: 13px; color: #0d9488 !important; background-color: rgba(13, 148, 136, 0.1) !important;">#${escapeHtml(buyer.industry)}</span>`);
+        industryContainer.append(`<span class="industry-tag-td" style="background:#f0fdfa; color:#0d9488; border:1px solid #0d948833;">${escapeHtml(buyer.industry)}</span>`);
     }
 
     const authorDisplayName = authorData.name || DEFAULT_MANAGER.name;
@@ -655,12 +633,10 @@ function renderSelectedTags() {
 
 function submitShare(buyerId, btnElement) {
     const memo = $('#share-memo').val().trim();
-
     if (selectedReceivers.length === 0) {
         alert('공유할 대상을 한 명 이상 선택해 주세요.');
         return;
     }
-
     const $btn = $(btnElement);
     const originalText = $btn.text();
     $btn.prop('disabled', true).text('전송 중...');
@@ -670,8 +646,8 @@ function submitShare(buyerId, btnElement) {
     }).get();
 
     const sharePromises = selectedReceivers.map(uid => {
-        const payload = {
-            table: 'shares', // total_buyers originally used 'shares' table
+        return APIcall({
+            table: 'shares',
             action: 'create',
             item_type: 'buyer',
             item_id: buyerId,
@@ -680,29 +656,20 @@ function submitShare(buyerId, btnElement) {
             memo: memo,
             file_ids: selectedFileIds,
             is_read: false
-        };
-        return APIcall(payload, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
-            .then(response => response.json());
+        }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' }).then(res => res.json());
     });
 
-    Promise.all(sharePromises)
-        .then(results => {
-            const errors = results.filter(r => r.error);
-            if (errors.length > 0) {
-                console.error('Partial Shared Errors:', errors);
-                alert(`${errors.length}건의 공유 중 오류가 발생했습니다.`);
-            } else {
-                alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
-                bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
-            }
-        })
-        .catch(error => {
-            console.error('Share Error:', error);
-            alert('공유 요청에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
-        })
-        .finally(() => {
-            $btn.prop('disabled', false).text(originalText);
-        });
+    Promise.all(sharePromises).then(results => {
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) alert(`${errors.length}건의 공유 중 오류 발생.`);
+        else {
+            alert(`${selectedReceivers.length}명의 대상에게 공유되었습니다.`);
+            bootstrap.Modal.getInstance(document.getElementById('share-modal')).hide();
+        }
+    }).catch(e => {
+        console.error('Share Error', e);
+        alert('공유 실패: ' + (e.message || '알 수 없는 오류'));
+    }).finally(() => $btn.prop('disabled', false).text(originalText));
 }
 
 // User search results click handler (re-bound in openShareModal if needed, 
@@ -721,8 +688,8 @@ $(document).on('click.userSearch', function (e) {
     }
 });
 
-$('#btn-submit-share').on('click', function () {
-    submitShare(currentShareBuyerId, this);
+$(document).on('click', '#btn-submit-share', function () {
+    submitShare(window.currentShareBuyerId, this);
 });
 
 
@@ -807,7 +774,7 @@ function applyFilters() {
 
         const localSigned = getSignedNdas();
         const isSigned = signedNdaIds.includes(String(buyer.id)) || localSigned.includes(String(buyer.id));
-        const isOwner = String(buyer.user_id) === String(currentuser_id);
+        const isOwner = !!(buyer.user_id && currentuser_id && String(buyer.user_id) === String(currentuser_id));
         const isAuthorized = isOwner || isSigned;
 
         const matchesVisibility = selectedVisibility.length === 0 || selectedVisibility.some(v => {
@@ -832,26 +799,20 @@ function applyFilters() {
 }
 
 function applySort(type, shouldRender = true) {
-    switch (type) {
-        case 'name':
-            filteredBuyers.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "", 'ko-KR'));
-            break;
-        case 'price':
-            filteredBuyers.sort((a, b) => {
-                const aVal = parseFloat(a.price) || 0;
-                const bVal = parseFloat(b.price) || 0;
-                return bVal - aVal;
-            });
-            break;
-        case 'latest':
-        default:
-            filteredBuyers.sort((a, b) => {
-                const dateA = new Date(a.updated_at || a.created_at);
-                const dateB = new Date(b.updated_at || b.created_at);
-                return dateB - dateA;
-            });
-            break;
+    if (type === 'latest') {
+        filteredBuyers.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    } else if (type === 'oldest') {
+        filteredBuyers.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at));
+    } else if (type === 'name_asc') {
+        filteredBuyers.sort((a, b) => (a.company_name || "").localeCompare(b.company_name || "", 'ko-KR'));
+    } else if (type === 'name_desc') {
+        filteredBuyers.sort((a, b) => (b.company_name || "").localeCompare(a.company_name || "", 'ko-KR'));
+    } else if (type === 'price_desc') {
+        filteredBuyers.sort((a, b) => (parseFloat(String(b.price || 0).replace(/,/g, '')) || 0) - (parseFloat(String(a.price || 0).replace(/,/g, '')) || 0));
+    } else if (type === 'price_asc') {
+        filteredBuyers.sort((a, b) => (parseFloat(String(a.price || 0).replace(/,/g, '')) || 0) - (parseFloat(String(b.price || 0).replace(/,/g, '')) || 0));
     }
+    
     if (shouldRender) {
         currentPage = 1;
         renderBuyers();
@@ -866,9 +827,9 @@ function applySort(type, shouldRender = true) {
 function exportToCSV() {
     if (filteredBuyers.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
     const signedNdas = getSignedNdas();
-    const headers = ['바이어명', '산업', '진행 상황', '가용자금(억)', '요약', '담당자', '등록일'];
+    const headers = ['매수자명', '산업', '진행 상황', '가용자금(억)', '요약', '담당자', '등록일'];
     const rows = filteredBuyers.map(b => {
-        const isOwner = String(b.user_id) === String(currentuser_id);
+        const isOwner = !!(b.user_id && currentuser_id && String(b.user_id) === String(currentuser_id));
         const isSigned = signedNdas.includes(String(b.id));
         const status = b.status || '대기';
         const isRestricted = (status === '진행중' || status === '완료');
@@ -881,7 +842,7 @@ function exportToCSV() {
             summary = summary.replace(nameRegex, 'OOO');
         }
         const author = userMap[b.user_id]?.name || 'Unknown';
-        const date = new Date(b.created_at).toLocaleDateString();
+        const date = (() => { const d = new Date(b.created_at); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })();
         const price = shouldMask ? '-' : (b.price || '');
         return [company_name, b.industry || '', status, price, summary, author, date].map(field => `"${String(field).replace(/"/g, '""')}"`);
     });

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Companies - DealChat</title>
+    <title>My Companies - DealChat</title>
     <!-- Bootstrap CSS - Moved up to let style.css override it -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
@@ -18,15 +18,13 @@
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <!-- AG Grid -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- html2pdf.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="../js/profile_modal.js" type="module"></script>
 </head>
 
-<body>
+<body class="theme-mode-companies" data-share-entity="기업">
     <!-- Global Loading Overlay -->
     <div id="global-loader">
         <div class="loader-logo">DealChat</div>
@@ -47,60 +45,40 @@
             <section class="page-content">
 
                 <div class="text-center mb-4">
-                    <h1
-                        style="font-size: 48px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; font-family: 'Outfit', sans-serif;">
-                        My Companies</h1>
-                    <p style="font-size: 20px; color: var(--text-secondary);">기업 정보 및 데이터베이스 관리</p>
+                    <h1 class="page-title">My Companies</h1>
+                    <p class="page-subtitle">내가 담당하는 기업 정보를 관리하세요.</p>
                 </div>
 
-                <div class="search-and-actions"
-                    style="margin-bottom: 32px; position: relative; display: flex; align-items: center; justify-content: flex-end; min-height: 60px;">
+                <div class="search-and-actions">
 
                     <!-- Centered Search Bar -->
-                    <div class="search-centered-wrap"
-                        style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; width: 100%; max-width: 800px; align-items: center; z-index: 1;">
-                        <button id="filter-toggle-btn" class="btn-outline-secondary active"
-                            style="width: 50px; height: 50px; border-radius: 25px; border: none; background: #1e293b; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; box-shadow: 0 4px 12px rgba(30, 41, 59, 0.2);">
-                            <span class="material-symbols-outlined" style="color: #ffffff;">filter_list</span>
-                        </button>
-                        <div class="input-wrapper"
-                            style="flex: 1; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); background: #ffffff; display: flex; align-items: center; border: 1px solid #e2e8f0; min-width: 0;">
-                            <span class="material-symbols-outlined"
-                                style="color: #64748b; font-size: 22px;">search</span>
-                            <input type="text" id="search-input" placeholder="기업명, ID 또는 키워드 검색..."
-                                style="flex: 1; border: none; outline: none; background: transparent; padding-left: 12px; font-size: 16px; color: #1e293b; min-width: 0;">
+                    <div class="search-centered-wrap">
+                        <div class="input-wrapper">
+                            <input type="text" id="search-input" placeholder="기업명, ID 또는 키워드로 검색해주세요">
+                            <button id="search-icon-btn">
+                                <span class="material-symbols-outlined">search</span>
+                            </button>
                         </div>
-                        <button id="search-btn" class="btn-primary"
-                            style="padding: 10px 32px; border-radius: 30px; background-color: #1A73E8; border: none; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; white-space: nowrap; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">
-                            검색
-                        </button>
                     </div>
 
                     <!-- Right: Action Icons -->
-                    <div class="actions-right"
-                        style="display: flex; gap: 12px; align-items: center; flex-shrink: 0; position: relative; z-index: 2;">
-                        <!-- CSV Download Icon Button -->
-                        <button id="export-csv-btn" class="btn-icon-round" title="CSV 다운로드"
-                            style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border: 1px solid #e2e8f0; color: #64748b; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                            <span class="material-symbols-outlined" style="font-size: 22px;">download</span>
+                    <div class="actions-right">
+                        <button id="export-csv-btn" class="btn-icon-round" title="CSV 다운로드">
+                            <span class="material-symbols-outlined">download</span>
                         </button>
-                        <!-- Add Company Icon Button -->
-                        <button id="new-btn" class="btn-icon-round" title="기업 등록"
-                            style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #1A73E8; border: none; color: white; transition: all 0.2s; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">
-                            <span class="material-symbols-outlined" style="font-size: 22px;">add</span>
+                        <button id="new-btn" class="btn-icon-round primary" title="기업 등록">
+                            <span class="material-symbols-outlined">add</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Collapsible Filter Container -->
-                <div id="filter-container"
-                    style="display: block; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
+                <div id="filter-container" class="filter-panel">
                     <!-- Industry Filter -->
                     <div class="filter-group mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-label fw-bold m-0" style="font-size: 15px; color: #1e293b;">산업분야</label>
-                            <button id="reset-filters" class="btn btn-link btn-sm p-0 text-decoration-none"
-                                style="font-size: 13px; color: #1A73E8; font-weight: 600;">선택 해제</button>
+                        <div class="filter-group-header mb-3">
+                            <label class="filter-group-label">산업분야</label>
+                            <button id="reset-filters" class="btn-filter-reset">선택 해제</button>
                         </div>
                         <div id="filter-industry-list" class="d-flex flex-wrap gap-2">
                             <!-- Industry checkboxes will be injected here -->
@@ -113,24 +91,23 @@
                         <div class="col-md-4">
                             <div class="filter-group mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <label class="form-label fw-bold m-0"
-                                        style="font-size: 15px; color: #1e293b;">관리현황</label>
+                                    <label class="filter-group-label">관리 현황</label>
                                 </div>
                                 <div id="filter-mgmt-list" class="d-flex flex-wrap gap-2">
                                     <div class="filter-item">
                                         <input type="checkbox" class="btn-check mgmt-checkbox" id="filter-mgmt-발굴"
-                                            value="발굴 기업" autocomplete="off">
-                                        <label class="industry-checkbox-label" for="filter-mgmt-발굴">발굴 기업</label>
+                                            value="발굴기업" autocomplete="off">
+                                        <label class="industry-checkbox-label" for="filter-mgmt-발굴">발굴기업</label>
                                     </div>
                                     <div class="filter-item">
                                         <input type="checkbox" class="btn-check mgmt-checkbox" id="filter-mgmt-보육"
-                                            value="보육 기업" autocomplete="off">
-                                        <label class="industry-checkbox-label" for="filter-mgmt-보육">보육 기업</label>
+                                            value="보육기업" autocomplete="off">
+                                        <label class="industry-checkbox-label" for="filter-mgmt-보육">보육기업</label>
                                     </div>
                                     <div class="filter-item">
                                         <input type="checkbox" class="btn-check mgmt-checkbox" id="filter-mgmt-투자"
-                                            value="투자 기업" autocomplete="off">
-                                        <label class="industry-checkbox-label" for="filter-mgmt-투자">투자 기업</label>
+                                            value="투자기업" autocomplete="off">
+                                        <label class="industry-checkbox-label" for="filter-mgmt-투자">투자기업</label>
                                     </div>
                                     <div class="filter-item">
                                         <input type="checkbox" class="btn-check mgmt-checkbox" id="filter-mgmt-기타"
@@ -145,7 +122,7 @@
                         <div class="col-md-2">
                             <div class="filter-group mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <label class="form-label fw-bold m-0" style="font-size: 15px; color: #1e293b;">공개여부</label>
+                                    <label class="filter-group-label">공개 여부</label>
                                 </div>
                                 <div id="filter-visibility-list" class="d-flex flex-nowrap gap-2">
                                     <div class="filter-item">
@@ -166,7 +143,7 @@
                         <div class="col-md-6">
                             <div class="filter-group mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <label class="form-label fw-bold m-0" style="font-size: 15px; color: #1e293b;">투자단계</label>
+                                    <label class="filter-group-label">투자단계</label>
                                 </div>
                                 <div id="filter-stage-list" class="d-flex flex-nowrap gap-2">
                                     <div class="filter-item">
@@ -205,26 +182,20 @@
                     <div class="row g-4">
                         <!-- Revenue Range Filter -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">매출액 범위
-                                (억)</label>
+                            <label class="filter-range-label">매출액 범위 (억)</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="number" id="filter-min-revenue" class="form-control" placeholder="최소"
-                                    style="border-radius: 10px; font-size: 14px;">
+                                <input type="number" id="filter-min-revenue" class="form-control filter-range-input" placeholder="최소">
                                 <span class="text-muted">~</span>
-                                <input type="number" id="filter-max-revenue" class="form-control" placeholder="최대"
-                                    style="border-radius: 10px; font-size: 14px;">
+                                <input type="number" id="filter-max-revenue" class="form-control filter-range-input" placeholder="최대">
                             </div>
                         </div>
                         <!-- Investment Range Filter -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">누적투자금 범위
-                                (억)</label>
+                            <label class="filter-range-label">누적투자금 범위 (억)</label>
                             <div class="d-flex align-items-center gap-2">
-                                <input type="number" id="filter-min-investment" class="form-control" placeholder="최소"
-                                    style="border-radius: 10px; font-size: 14px;">
+                                <input type="number" id="filter-min-investment" class="form-control filter-range-input" placeholder="최소">
                                 <span class="text-muted">~</span>
-                                <input type="number" id="filter-max-investment" class="form-control" placeholder="최대"
-                                    style="border-radius: 10px; font-size: 14px;">
+                                <input type="number" id="filter-max-investment" class="form-control filter-range-input" placeholder="최대">
                             </div>
                         </div>
                     </div>
@@ -233,67 +204,49 @@
 
                 <!-- Table Header Section: Title & Sort -->
                 <div class="d-flex justify-content-between align-items-end mb-3 px-1">
-                    <div
-                        style="font-size: 16px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                        기업 목록
-                    </div>
+                    <div class="list-section-title">기업 목록</div>
                     <div class="dropdown">
                         <button
-                            class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center justify-content-between p-2"
-                            type="button" id="sort-dropdown-btn" data-bs-toggle="dropdown" aria-expanded="false"
-                            style="min-width: 140px; border-radius: 10px; border: 1px solid #e2e8f0; background: #ffffff; color: #475569; font-size: 13px; font-weight: 500; transition: all 0.2s;">
+                            class="btn btn-outline-secondary dropdown-toggle sort-dropdown-btn d-flex align-items-center justify-content-between p-2"
+                            type="button" id="sort-dropdown-btn" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 18px; color: #64748b;">sort</span>
-                                <span id="current-sort-label">최신일자순</span>
+                                <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">sort</span>
+                                <span id="current-sort-label">최근 등록순</span>
                             </div>
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: #94a3b8;">expand_more</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 mt-2"
                             aria-labelledby="sort-dropdown-btn"
-                            style="border-radius: 12px; font-size: 13px; min-width: 160px;">
-                            <li><a class="dropdown-item rounded-3 py-2 sort-option active" href="#"
-                                    data-sort="latest">최신일자순</a></li>
-                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="name">기업 이름순</a>
-                            </li>
-                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#"
-                                    data-sort="revenue">매출액순</a></li>
-                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#"
-                                    data-sort="investment">누적투자금순</a></li>
+                            style="border-radius: 12px; min-width: 180px;">
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option active" href="#" data-sort="latest">최근 등록순</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="oldest">오래된 등록순</a></li>
+                            <li class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="name_asc">기업 이름순 (ㄱ-ㅎ)</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="name_desc">기업 이름순 (ㅎ-ㄱ)</a></li>
+                            <li class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="revenue_desc">매출액 높은순</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="revenue_asc">매출액 낮은순</a></li>
+                            <li class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="investment_desc">누적투자금 높은순</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="investment_asc">누적투자금 낮은순</a></li>
                         </ul>
                     </div>
                 </div>
 
                 <!-- Companies Table Container -->
-                <div id="company-list-wrap"
-                    style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                <div id="company-list-wrap" class="list-table-wrap">
                     <div class="table-responsive">
                         <table class="table table-hover m-0" style="table-layout: fixed; vertical-align: middle;">
-                            <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                            <thead>
                                 <tr>
-                                    <th
-                                        style="width: 180px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        기업명</th>
-                                    <th
-                                        style="width: 140px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        산업</th>
-                                    <th
-                                        style="width: 90px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        매출액</th>
-                                    <th
-                                        style="width: 100px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        누적투자금</th>
-                                    <th
-                                        style="width: 300px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        소개 및 요약</th>
-                                    <th
-                                        style="width: 110px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        담당자</th>
-                                    <th
-                                        style="width: 110px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; border-right: 1px solid #f1f5f9; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        수정일</th>
-                                    <th
-                                        style="width: 70px; padding: 12px 24px !important; color: #64748b; font-weight: 600; font-size: 14px; border-top: none; vertical-align: middle !important; text-align: left !important; white-space: nowrap;">
-                                        공유</th>
+                                    <th class="list-th" style="width: 240px;">기업명</th>
+                                    <th class="list-th" style="width: 140px;">산업</th>
+                                    <th class="list-th" style="width: 90px;">매출액</th>
+                                    <th class="list-th" style="width: 100px;">누적투자금</th>
+                                    <th class="list-th" style="width: 300px;">비공개 메모 (작성자만 확인 가능)</th>
+                                    <th class="list-th" style="width: 110px;">담당자</th>
+                                    <th class="list-th" style="width: 110px;">등록일</th>
+                                    <th class="list-th" style="width: 70px;">공유</th>
                                 </tr>
                             </thead>
                             <tbody id="company-list-container">
@@ -315,40 +268,30 @@
     <!-- New Company Modal -->
     <div class="modal" id="new-company-modal" tabindex="-1" aria-labelledby="newCompanyModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl modal-wide">
-            <div class="modal-content border-0 shadow-lg"
-                style="border-radius: 12px; background-color: #ffffff !important;">
-                <div class="modal-header border-0 pt-4 px-4 pb-2" style="background: transparent !important;">
-                    <h5 class="modal-title fw-bold" id="newCompanyModalLabel"
-                        style="color: #1a2d48 !important; font-size: 22px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+                <div class="modal-header border-0 pt-4 px-4 pb-2">
+                    <h5 class="modal-title fw-bold" id="newCompanyModalLabel" style="color: #1a2d48; font-size: 22px;">
                         기업 등록</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4 pt-2" style="background-color: #ffffff !important;">
+                <div class="modal-body p-4 pt-2">
                     <form id="new-company-form" class="w-100 container-fluid">
                         <!-- Icon Preview Section -->
                         <div class="text-center mb-4">
-                            <div id="new-company-icon-preview" class="mx-auto"
-                                style="width: 64px; height: 64px; background: #f1f5f9; border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 32px; color: #64748b;">corporate_fare</span>
+                            <div id="new-company-icon-preview" class="icon-preview-box mx-auto">
+                                <span class="material-symbols-outlined" style="font-size: 32px; color: #64748b;">corporate_fare</span>
                             </div>
-                            <div class="mt-2 text-muted"
-                                style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">산업군 아이콘 미리보기
-                            </div>
+                            <div class="mt-2 text-muted icon-preview-label">산업군 아이콘 미리보기</div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-4">
-                                <label class="form-label fw-bold"
-                                    style="color: #64748b !important; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">기업명</label>
-                                <input type="text" id="new-company-name" class="form-control px-3 py-2 border-1"
-                                    style="border-radius: 8px; border-color: #e2e8f0 !important; background-color: #ffffff !important; font-size: 15px; color: #334155 !important;"
+                                <label class="form-label modal-form-label">기업명</label>
+                                <input type="text" id="new-company-name" class="form-control modal-form-control px-3 py-2"
                                     placeholder="기업 이름을 입력하세요" required>
                             </div>
                             <div class="col-md-6 mb-4">
-                                <label class="form-label fw-bold"
-                                    style="color: #64748b !important; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">산업</label>
-                                <select id="new-company-industry" class="form-select px-3 py-2 border-1"
-                                    style="border-radius: 8px; border-color: #e2e8f0 !important; background-color: #ffffff !important; font-size: 15px; color: #334155 !important;">
+                                <label class="form-label modal-form-label">산업</label>
+                                <select id="new-company-industry" class="form-select modal-form-control px-3 py-2">
                                     <option value="AI">AI</option>
                                     <option value="IT·정보통신">IT·정보통신</option>
                                     <option value="SaaS·솔루션">SaaS·솔루션</option>
@@ -376,512 +319,42 @@
                         </div>
                         <div class="row">
                             <div class="col-12 mb-4">
-                                <label class="form-label fw-bold"
-                                    style="color: #64748b !important; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">회사소개</label>
-                                <textarea id="new-company-summary" class="form-control px-3 py-2 border-1"
-                                    style="border-radius: 8px; border-color: #e2e8f0 !important; background-color: #ffffff !important; font-size: 15px; color: #334155 !important;"
+                                <label class="form-label modal-form-label">회사소개</label>
+                                <textarea id="new-company-summary" class="form-control modal-form-control px-3 py-2"
                                     rows="10" placeholder="회사에 대한 간단한 설명을 입력하세요"></textarea>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-12 mb-2">
-                                <label class="form-label fw-bold"
-                                    style="color: #64748b !important; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">담당자
-                                    메모</label>
-                                <textarea id="new-company-memo" class="form-control px-3 py-2 border-1"
-                                    style="border-radius: 8px; border-color: #e2e8f0 !important; background-color: #ffffff !important; font-size: 15px; color: #334155 !important;"
+                                <label class="form-label modal-form-label">담당자 메모</label>
+                                <textarea id="new-company-memo" class="form-control modal-form-control px-3 py-2"
                                     rows="6" placeholder="담당자만 확인할 수 있는 메모를 입력하세요"></textarea>
                             </div>
                         </div>
 
                     </form>
                 </div>
-                <div class="modal-footer border-0 pb-4 px-4" style="background-color: #ffffff !important;">
-                    <button type="button" class="btn px-4 py-2 rounded-pill fw-bold me-2" data-bs-dismiss="modal"
-                        style="background: #f1f5f9 !important; color: #475569 !important; border: none; font-size: 14px;">취소</button>
-                    <button type="button" id="save-new-company" class="btn btn-primary px-5 py-2 rounded-pill fw-bold"
-                        style="background: #1A73E8 !important; border: none; font-size: 14px; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">등록</button>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn px-4 py-2 rounded-pill fw-bold me-2 modal-cancel-btn" data-bs-dismiss="modal">취소</button>
+                    <button type="button" id="save-new-company" class="btn px-5 py-2 rounded-pill fw-bold modal-primary-btn">등록</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Detail Company Modal -->
-    <div class="modal" id="company-detail-modal" tabindex="-1" aria-labelledby="companyDetailModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-half-screen">
-            <div class="modal-content border-0"
-                style="border-radius: 16px; background: #ffffff; color: #334155; height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
-                <!-- Close Button Layer -->
-                <div class="position-absolute top-0 end-0 pt-4 px-4" style="z-index: 10;">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
 
-                <div class="modal-body p-0"
-                    style="flex: 1; overflow-y: auto; background: #ffffff; display: flex; flex-direction: column;">
-                    <!-- 1. Header Section (Profile) -->
-                    <div class="pt-5 pb-4 px-5 text-center border-bottom bg-white" style="flex: 0 0 auto;">
-                        <div class="company-icon-square mx-auto mb-3"
-                            style="width: 84px; height: 84px; background: #1A73E8; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: none; flex-shrink: 0;">
-                            <span id="detail-company-icon" class="material-symbols-outlined"
-                                style="font-size: 44px; color: #ffffff;">corporate_fare</span>
-                        </div>
-                        <h2 id="detail-company-name" class="fw-bold mb-2"
-                            style="font-size: 28px; color: #1e293b; letter-spacing: -0.5px;"></h2>
-                        <div id="detail-industry-container" class="d-flex justify-content-center gap-2"></div>
-                    </div>
 
-                    <!-- 3. Summary & Memo Section -->
-                    <div class="px-5 pt-4 pb-4"
-                        style="flex: 1; background-color: #ffffff !important; overflow-y: auto;">
-                        <!-- 상세 기업 소개 -->
-                        <div class="mb-4">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                                <div class="d-flex align-items-center justify-content-center"
-                                    style="width: 28px; height: 28px; background: #e0e7ff; border-radius: 8px;">
-                                    <span class="material-symbols-outlined"
-                                        style="color: #3b82f6; font-size: 16px;">description</span>
-                                </div>
-                                <span class="fw-bold" style="letter-spacing: 0.5px; color: #1e293b; font-size: 14px;">상세
-                                    기업 소개</span>
-                            </div>
-                            <div id="detail-company-summary"
-                                style="font-size: 15px; line-height: 1.8; color: #334155; white-space: pre-wrap; word-break: break-all; padding-left: 4px;">
-                            </div>
-                            <!-- 수정일자 표시 영역 -->
-                            <div id="detail-modified-date-container" class="text-end mt-4">
-                                <span id="detail-modified-date" style="font-size: 11px; color: #94a3b8;"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div> <!-- modal-body 닫기 -->
-                <!-- 4. Footer Section (Sticky White) -->
-                <div class="px-5 py-4 border-top bg-white" style="flex: 0 0 auto;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div id="detail-author-info-box" class="d-flex align-items-center gap-3" style="cursor: pointer;">
-                            <img id="detail-author-avatar" src="" alt="Avatar" class="rounded-circle"
-                                 style="width: 44px; height: 44px; border: 1px solid #e2e8f0;">
-                            <div class="d-flex flex-column justify-content-center" style="min-width: 0; overflow: hidden;">
-                                <div style="line-height: 1;">
-                                    <span id="detail-author-name" class="fw-bold text-truncate"
-                                        style="font-size: 14px; color: #1e293b; max-width: 100px; display: inline-block;"></span>
-                                </div>
-                                <div id="detail-author-affiliation-container" style="margin-top: 2px; line-height: 1;">
-                                    <span id="detail-author-affiliation"
-                                        class="badge bg-secondary-subtle text-secondary fw-normal text-truncate"
-                                        style="font-size: 11px; max-width: 150px; display: inline-block; padding: 2px 6px;"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary px-4 rounded-pill fw-bold"
-                                data-bs-dismiss="modal"
-                                style="font-size: 13px; border-color: #e2e8f0; color: #64748b;">닫기</button>
-                            <button type="button" id="go-to-dealbook" class="btn btn-primary px-4 rounded-pill fw-bold"
-                                style="background: #1A73E8; border: none; font-size: 13px;">수정하기</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Share Options Modal (New) -->
-    <div class="modal" id="share-options-modal" tabindex="-1" aria-labelledby="shareOptionsLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0"
-                style="border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden;">
-                <div class="modal-header border-0 pb-0 pt-4 px-4 bg-white">
-                    <h5 class="modal-title fw-bold" id="shareOptionsLabel" style="font-size: 18px; color: #1e293b;">기업내역
-                        공유 방식 선택</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4 bg-white">
-                    <div class="d-flex flex-column gap-3">
-                        <!-- 팀원에게 직접 공유 기능 비활성화
-                        <button type="button" id="btn-share-with-user-trigger"
-                            class="share-option-btn share-option-user d-flex align-items-center justify-content-between p-3 rounded-4"
-                            style="font-weight: 600; font-size: 15px; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #ffffff;">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="material-symbols-outlined p-2 icon-bg"
-                                    style="background: #f1f5f9; color: #64748b; border-radius: 12px; font-size: 24px; transition: all 0.2s;">group</span>
-                                <div class="text-start">
-                                    <div class="title-text" style="color: #475569; transition: all 0.2s;">팀원에게 직접 공유</div>
-                                    <div style="font-size: 12px; color: #94a3b8; font-weight: normal;">딜챗 유저에게 직접 정보를 전달합니다.</div>
-                                </div>
-                            </div>
-                            <span class="material-symbols-outlined chevron" style="color: #cbd5e1; transition: all 0.2s;">chevron_right</span>
-                        </button>
-                        -->
-
-                        <button type="button" id="btn-share-url"
-                            class="share-option-btn share-option-link d-flex align-items-center justify-content-between p-3 rounded-4"
-                            style="font-weight: 600; font-size: 15px; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #ffffff;">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="material-symbols-outlined p-2 icon-bg"
-                                    style="background: #f1f5f9; color: #64748b; border-radius: 12px; font-size: 24px; transition: all 0.2s;">link</span>
-                                <div class="text-start">
-                                    <div class="title-text" style="color: #475569; transition: all 0.2s;">URL 주소 복사
-                                    </div>
-                                    <div style="font-size: 12px; color: #94a3b8; font-weight: normal;">현재 기업의 공개 링크를
-                                        복사합니다.</div>
-                                </div>
-                            </div>
-                            <span class="material-symbols-outlined chevron"
-                                style="color: #cbd5e1; transition: all 0.2s;">content_copy</span>
-                        </button>
-                        </button>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Share Company Modal -->
-    <div class="modal" id="share-modal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0" style="border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-                <div class="modal-header border-0 pb-0 pt-4 px-4">
-                    <h5 class="modal-title fw-bold" id="shareModalLabel" style="font-size: 20px; color: #1e293b;">기업
-                        공유하기</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body px-4 pt-3 pb-4">
-                    <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">공유할 대상을 선택하고 메모를 남겨주세요.</p>
-                    <div class="mb-3 position-relative">
-                        <label class="form-label fw-bold" style="font-size: 14px; color: #334155;">수신자 선택</label>
-
-                        <!-- Search Input -->
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"
-                                style="border-radius: 10px 0 0 10px; border-color: #e2e8f0;">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 20px; color: #64748b;">search</span>
-                            </span>
-                            <input type="text" id="share-user-search" class="form-control border-start-0"
-                                placeholder="팀원 이름 검색..."
-                                style="border-radius: 0 10px 10px 0; font-size: 14px; padding: 10px 12px; border-color: #e2e8f0;">
-                        </div>
-
-                        <!-- Search Results Dropdown -->
-                        <div id="user-search-results"
-                            class="position-absolute w-100 mt-1 shadow-lg border rounded-3 bg-white"
-                            style="display: none; z-index: 1050; max-height: 200px; overflow-y: auto;">
-                            <!-- Search results will be injected here -->
-                        </div>
-
-                        <!--Selected Users Tags Container -->
-                        <div id="selected-users-container" class="d-flex flex-wrap gap-2 p-2 mt-2"
-                            style="min-height: 45px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
-                            <span class="text-muted p-1" style="font-size: 13px;">이름으로 팀원을 검색하세요.</span>
-                        </div>
-                    </div>
-
-                    <!-- File Selection Area -->
-                    <div class="mb-3" id="share-file-selection-area">
-                        <label class="form-label fw-bold" style="font-size: 14px; color: #334155;">첨부 파일 선택</label>
-                        <div id="share-file-selection-list" class="p-2 border rounded-3 bg-light" 
-                             style="max-height: 150px; overflow-y: auto;">
-                            <div class="text-muted p-1" style="font-size: 13px;">불러올 수 있는 파일이 없습니다.</div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="share-memo" class="form-label fw-bold" style="font-size: 14px; color: #334155;">메모
-                            (선택사항)</label>
-                        <textarea id="share-memo" class="form-control" rows="3" placeholder="공유하는 목적이나 참고사항을 적어주세요."
-                            style="border-radius: 10px; font-size: 14px; resize: none; border: 1px solid #e2e8f0;"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 px-4 pb-4 pt-0">
-                    <button type="button" class="btn px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal"
-                        style="background: #f1f5f9; color: #475569; font-size: 14px;">취소</button>
-                    <button type="button" id="btn-submit-share" class="btn btn-primary px-4 py-2 rounded-pill fw-bold"
-                        style="background: #1A73E8; border: none; font-size: 14px; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">보내기</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Inbox Modal -->
-    <!-- Inbox Modal Disabled
-        <div class="modal" id="inbox-modal" tabindex="-1" aria-labelledby="inboxModalLabel" aria-hidden="true">
-            ...
-        </div>
-        -->
-
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/front-config.js"></script>
     <script src="../js/header_loader.js"></script>
     <script src="../js/footer_loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/modal_loader.js"></script>
     <script src="../js/my_companies.js?v=20260308_06" type="module"></script>
-    <style>
-        @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css');
-        @import url('https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css');
-
-        .ag-theme-alpine {
-            --ag-background-color: #ffffff;
-            --ag-header-background-color: #f8f9fa;
-            --ag-odd-row-background-color: #ffffff;
-            --ag-border-color: #e2e8f0;
-            --ag-header-foreground-color: #64748b;
-            --ag-foreground-color: #1e293b;
-            --ag-row-hover-color: #f1f5f9;
-            --ag-font-family: 'Pretendard', 'Inter', sans-serif;
-        }
-
-        /* Checkbox Filter Styles */
-        .industry-checkbox-label {
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            user-select: none;
-            white-space: nowrap;
-        }
-
-        .industry-checkbox:checked+.industry-checkbox-label,
-        .mgmt-checkbox:checked+.industry-checkbox-label,
-        .visibility-checkbox:checked+.industry-checkbox-label,
-        .stage-checkbox:checked+.industry-checkbox-label {
-            background-color: #1A73E8;
-            border-color: #1A73E8;
-            color: white;
-            box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
-        }
-
-        .industry-checkbox-label:hover {
-            border-color: #1A73E8;
-            color: #1A73E8;
-        }
-
-        /* Table UI Improvements */
-        .table> :not(caption)>*>* {
-            padding: 16px 24px;
-            border-bottom-color: #f1f5f9;
-            vertical-align: middle !important;
-        }
-
-        .table tbody tr {
-            height: 100px;
-        }
-
-        .table thead tr {
-            height: 50px;
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .company-name-td {
-            font-weight: 700;
-            color: #1e293b;
-            font-size: 15px;
-        }
-
-        .industry-tag-td {
-            font-weight: 600;
-            color: #1A73E8;
-            font-size: 13px;
-            background: #f0f7ff;
-            padding: 4px 12px;
-            border-radius: 6px;
-            display: inline-block;
-            border: 1px solid #dbeafe;
-        }
-
-        .summary-td {
-            color: #64748b;
-            font-size: 14px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: normal;
-            line-height: 1.5;
-            max-height: 3em;
-        }
-
-        .author-td {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            min-width: 0;
-            overflow: hidden;
-        }
-
-        .author-info-wrap {
-            line-height: 1.2;
-            overflow: hidden;
-            width: 100%;
-            min-width: 0;
-        }
-
-        .author-name-td {
-            font-size: 13px;
-            font-weight: 600;
-            color: #1e293b;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .author-affiliation-td {
-            font-size: 11px;
-            color: #94a3b8;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .author-avatar-sm {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-        }
-
-        .date-td {
-            color: #94a3b8;
-            font-size: 13px;
-            text-align: right;
-        }
-
-        .row-action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            border: none;
-            background: transparent;
-            color: #94a3b8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .row-action-btn:hover {
-            background-color: #1A73E8 !important;
-            color: #ffffff !important;
-        }
-
-        /* Modal Share Option Buttons */
-        .share-option-btn {
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-
-        /* Modal Share Option Buttons Hover (Unified Blue) */
-        .share-option-btn:hover {
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.12);
-            transform: translateY(-2px);
-            border-color: #1A73E8 !important;
-            background-color: #f0f7ff !important;
-        }
-
-        .share-option-btn:hover .icon-bg {
-            background-color: #e0e7ff !important;
-            color: #1A73E8 !important;
-        }
-
-        .share-option-btn:hover .title-text {
-            color: #1A73E8 !important;
-        }
-
-        .share-option-btn:hover .chevron {
-            color: #1A73E8 !important;
-        }
-
-        /* Inbox Tab Styles */
-        .inbox-tab-btn.active {
-            background: #1A73E8 !important;
-            color: white !important;
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25) !important;
-        }
-
-        #inbox-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #inbox-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #inbox-list::-webkit-scrollbar-thumb {
-            background: #e2e8f0;
-            border-radius: 10px;
-        }
-
-        #inbox-list::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
-        }
-
-        /* Inbox Delete Button States */
-        #btn-delete-inbox:disabled {
-            border-color: #e2e8f0 !important;
-            color: #cbd5e1 !important;
-            background: transparent !important;
-            cursor: not-allowed;
-        }
-
-        #btn-delete-inbox:not(:disabled) {
-            border-color: #ef4444 !important;
-            color: #ef4444 !important;
-        }
-
-        #btn-delete-inbox:not(:disabled):hover {
-            background-color: #ef4444 !important;
-            color: #ffffff !important;
-        }
-
-        /* Sorting Filter & Text Visibility */
-        #inbox-sort-btn,
-        #sort-dropdown-btn,
-        .inbox-sort-option,
-        .sort-option {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            opacity: 1 !important;
-        }
-
-        #current-inbox-sort,
-        #current-sort-label,
-        .inbox-row,
-        .modal-title,
-        #inbox-modal {
-            color: #000000 !important;
-        }
-
-        .dropdown-menu {
-            background-color: #ffffff !important;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-
-        .dropdown-item {
-            color: #000000 !important;
-        }
-
-        .dropdown-item:hover {
-            background-color: #f1f5f9 !important;
-        }
-
-        .dropdown-item.active {
-            background-color: #1A73E8 !important;
-            color: #ffffff !important;
-        }
-    </style>
 </body>
+
 
 </html>

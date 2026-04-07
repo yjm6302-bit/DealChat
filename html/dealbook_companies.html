@@ -17,17 +17,44 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <style>
+        /* 초기 로딩 시 작성 모드 잔상 방지 */
+        body.is-loading .app-container { opacity: 0; pointer-events: none; }
+        .app-container { transition: opacity 0.4s ease; }
+
+        :root {
+            --page-theme-color: #1A73E8;
+            --page-theme-shadow: rgba(26, 115, 232, 0.2);
+        }
+
         .btn-status-chip.active {
-            background: #1A73E8 !important;
+            background: var(--page-theme-color) !important;
             color: #ffffff !important;
-            border-color: #1A73E8 !important;
+            border-color: var(--page-theme-color) !important;
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(26, 115, 232, 0.2);
+            box-shadow: 0 2px 4px var(--page-theme-shadow);
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spin-animation {
+            animation: rotate 1.5s linear infinite;
+            display: inline-block !important;
+        }
+
+        .suggested-prompts {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: 600px;
         }
     </style>
 </head>
 
-<body style="overflow: hidden; height: 100vh;">
+<body class="is-loading" style="overflow: hidden; height: 100vh;">
     <!-- Global Loading Overlay -->
     <div id="global-loader">
         <div class="loader-logo">DealChat</div>
@@ -48,16 +75,6 @@
                         style="font-size: 20px; color: var(--primary-color);">domain</span>
                     <span id="sidebar-header-title">기업정보</span>
                 </h2>
-                <!-- Share Button (Hidden by default, shown for saved companies) -->
-                <button class="btn-icon-only position-absolute" id="btn-share-db-trigger" title="기업정보 공유하기"
-                    style="right: 15px; color: #1e293b; background: transparent; border: none; padding: 6px; border-radius: 8px; display: none; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10;">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">share</span>
-                </button>
-                <!-- PDF 저장 버튼 (리포트 모드에서만 표시) -->
-                <!-- <button class="btn-icon-only position-absolute" id="btn-pdf-download" title="PDF로 저장"
-                    style="right: 15px; color: #ffffff; background: transparent; border: none; padding: 6px; border-radius: 8px; display: none; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10;">
-                    <span class="material-symbols-outlined" style="font-size: 22px;">picture_as_pdf</span>
-                </button> -->
             </div>
 
             <nav class="sidebar-nav" id="sidebar-nav"
@@ -67,7 +84,7 @@
                     <button id="ai-auto-fill-btn"
                         style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <span class="material-symbols-outlined"
-                            style="font-size: 20px; color: #6366f1;">auto_awesome</span>
+                            style="font-size: 20px; color: var(--page-theme-color);">auto_awesome</span>
                         <span style="font-size: 14px; font-weight: 600; color: #475569;">분석된 파일로 AI가 자동 입력하기</span>
                     </button>
                     <p style="margin: 4px 0 0 4px; font-size: 11px; color: #94a3b8;">* 업로드된 파일 내용을 바탕으로 기본 정보를 추출합니다.
@@ -77,14 +94,14 @@
                 <!-- 관리현황 -->
                 <div style="margin-bottom: 24px;">
                     <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                        관리현황<span style="color: #ef4444; margin-left: 2px;">*</span></p>
+                        관리 현황<span style="color: #ef4444; margin-left: 2px;">*</span></p>
                     <div id="mgmt-status-group"
                         style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px;">
-                        <button type="button" class="btn-status-chip" data-value="발굴 기업"
+                        <button type="button" class="btn-status-chip" data-value="발굴기업"
                             style="padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; transition: all 0.2s;">발굴기업</button>
-                        <button type="button" class="btn-status-chip" data-value="보육 기업"
+                        <button type="button" class="btn-status-chip" data-value="보육기업"
                             style="padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; transition: all 0.2s;">보육기업</button>
-                        <button type="button" class="btn-status-chip" data-value="투자 기업"
+                        <button type="button" class="btn-status-chip" data-value="투자기업"
                             style="padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; transition: all 0.2s;">투자기업</button>
                         <button type="button" class="btn-status-chip" data-value="기타"
                             style="padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; transition: all 0.2s;">기타</button>
@@ -103,7 +120,8 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">business</span>
                                 기업명<span style="color: #ef4444; margin-left: 2px;">*</span>
                             </p>
                         </div>
@@ -114,9 +132,6 @@
                                     style="font-size: 14px; font-weight: 700; color: #1e293b; width: 100%; outline: none;"
                                     placeholder="기업명"></span>
                             </div>
-                            <div id="company-suggestions"
-                                style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 100; max-height: 250px; overflow-y: auto; margin-top: 4px;">
-                            </div>
                         </div>
                     </div>
 
@@ -124,13 +139,14 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">category</span>
                                 산업<span style="color: #ef4444; margin-left: 2px;">*</span>
                             </p>
                         </div>
-                        <select id="industry"
-                            style="width: 100%; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px;">
-                            <option value="선택해주세요" selected>선택해주세요</option>
+                        <select id="industry" required
+                            style="width: 100%; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background: #ffffff; color: #94a3b8; height: 42px;">
+                            <option value="" selected disabled>선택해주세요</option>
                             <option value="AI">AI</option>
                             <option value="IT·정보통신">IT·정보통신</option>
                             <option value="SaaS·솔루션">SaaS·솔루션</option>
@@ -166,7 +182,9 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">대표자명
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">person</span>
+                                대표자명
                             </p>
                         </div>
                         <input type="text" id="ceo-name"
@@ -178,7 +196,9 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">이메일
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">mail</span>
+                                이메일
                             </p>
                         </div>
                         <input type="email" id="company-email"
@@ -193,7 +213,9 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">설립일자
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">calendar_month</span>
+                                설립일자
                             </p>
                         </div>
                         <input type="text" id="establishment-date"
@@ -205,7 +227,9 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">주소
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">location_on</span>
+                                주소
                             </p>
                         </div>
                         <input type="text" id="company-address"
@@ -242,7 +266,8 @@
 
                 <!-- 회사소개 -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
                         회사소개<span style="color: #ef4444; margin-left: 2px;">*</span>
                     </p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -251,11 +276,23 @@
                             placeholder="회사소개 내용을 입력하거나 AI 버튼을 눌러보세요..."></textarea>
                     </div>
 
+                    <!-- 주요 제품/서비스 -->
+                    <div style="margin-top: 24px;">
+                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">inventory_2</span>
+                            주요 제품/서비스
+                        </p>
+                        <textarea id="key-products"
+                            style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #FFFFFF; color: #334155; overflow: hidden;"
+                            placeholder="주요 제품이나 서비스 내용을 입력하세요..."></textarea>
+                    </div>
+
 
                     <!-- 투자현황 동적 폼 -->
                     <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-top: 20px;"
                         id="investment-section">
-                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">payments</span>
                             투자 정보</p>
                         <!-- Header Row -->
                         <div
@@ -282,7 +319,8 @@
                     <!-- 재무현황 동적 폼 -->
                     <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-top: 20px;"
                         id="financial-section">
-                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">analytics</span>
                             재무 정보</p>
                         <!-- Header Row -->
                         <div
@@ -305,23 +343,39 @@
                         </button>
                     </div>
 
+
+
                     <!-- 재무분석 -->
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                        <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">재무분석</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">query_stats</span>
+                            재무분석</p>
                         <textarea id="financial-analysis"
                             style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #FFFFFF; color: #334155; overflow: hidden;"
                             placeholder="재무제표 분석 내용을 입력하세요..."></textarea>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                        <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">담당자 의견
+                        <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">chat_bubble</span>
+                            담당자 의견
                         </p>
                         <textarea id="manager-memo"
                             style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #FFFFFF; color: #334155; overflow: hidden;"
                             placeholder="담당자의 분석 의견을 입력하세요..."></textarea>
 
-                        <!-- 작성자/업데이트 정보 UI -->
-                        <div id="memo-user-info-section" style="display: flex; align-items: center; justify-content: space-between; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                        <!-- 비공개 메모 -->
+                        <div class="private-memo-section" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: #1A73E8; display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                                비공개 메모 (작성자만 확인 가능)</p>
+                            <textarea id="private-memo"
+                                style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--primary-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: #1A73E8; overflow: hidden;"
+                                placeholder="나만 볼 수 있는 비공개 메모를 입력하세요..."></textarea>
+                        </div>
+
+                        <!-- 작성자/업데이트 정보 UI (기본적으로 숨김, 리포트 모드에서만 표시) -->
+                        <div id="memo-user-info-section" style="display: none; align-items: center; justify-content: space-between; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
                             <!-- 업데이트 일자 (좌측) -->
                             <div id="memo-update-date" style="font-size: 11px; color: #94a3b8; font-weight: 500; white-space: nowrap;"></div>
 
@@ -367,6 +421,7 @@
             style="height: 100vh; overflow: hidden; border-right: 1px solid var(--border-color); border-left: 1px solid var(--border-color);">
             <header class="panel-header"
                 style="height: 65px; padding: 0 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
+                
                 <h2
                     style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
                     <span class="material-symbols-outlined"
@@ -405,11 +460,22 @@
             </section>
 
             <footer class="input-area"
-                style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #ffffff;">
+                style="padding: 12px 20px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; flex-direction: column; align-items: flex-start;">
+                <!-- AI 모델 선택기 이동 (입력창 위로) -->
+                <div class="model-selector-container" style="margin-bottom: 8px;">
+                    <button id="btn-model-selector" class="btn-model-selector" title="AI 모델 선택">
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: #6366f1;">deployed_code</span>
+                        <span id="current-model-name" style="font-size: 13px;">연결 중...</span>
+                        <span class="material-symbols-outlined" style="font-size: 16px;">expand_less</span>
+                    </button>
+                    <div id="model-dropdown" class="model-dropdown">
+                        <!-- 모델 옵션들이 JS를 통해 동적으로 생성됩니다 -->
+                    </div>
+                </div>
                 <div class="input-wrapper"
                     style="max-width: 100%; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-radius: 20px;">
                     <textarea id="chat-input" placeholder="업로드된 소스에 대해 질문해보세요..." rows="1"
-                        style="background: transparent; color: #334155; font-size: 15px; margin: 0; padding-top: 12px; padding-bottom: 12px;"></textarea>
+                        style="background: transparent; color: #334155; font-size: 15px; margin: 0; padding-top: 8px; padding-bottom: 8px;"></textarea>
                     <div class="input-tools-right">
                         <button class="btn-send" id="send-btn">
                             <span class="material-symbols-outlined">send</span>
@@ -442,312 +508,29 @@
                             <span>추가</span>
                         </button>
                     </div>
-                    <div class="file-list-card"
-                        style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 200px; overflow-y: auto; margin-bottom: 8px;">
+                    <div class="file-list-card" id="training-drop-zone"
+                        style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 600px; overflow-y: auto; margin-bottom: 8px;">
                         <ul class="source-list" id="source-list-training"
                             style="margin: 0; padding: 0; list-style: none;">
                             <!-- Training files will appear here -->
                         </ul>
                     </div>
 
-                    <!-- 학습데이터-재무제표 섹션 -->
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; margin-top: 16px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습데이터-재무제표
-                        </h3>
-                        <button class="btn-new-source" id="add-source-finance"
-                            style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-                            <span>추가</span>
-                        </button>
-                    </div>
-                    <div class="file-list-card"
-                        style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 200px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-finance"
-                            style="margin: 0; padding: 0; list-style: none;">
-                            <!-- Finance files will appear here -->
-                        </ul>
-                    </div>
-
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; padding: 0 4px;">* AI 프롬프트
-                        및 분석에 반영되는 데이터입니다.</p>
-                </div>
-
-                <!-- Non-training Data Section -->
-                <div class="data-section">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">비학습 데이터</h3>
-                        <button class="btn-new-source" id="add-source-non-training"
-                            style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-                            <span>추가</span>
-                        </button>
-                    </div>
-                    <div class="file-list-card"
-                        style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 300px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-non-training"
-                            style="margin: 0; padding: 0; list-style: none;">
-                            <!-- Non-training files will appear here -->
-                        </ul>
-                    </div>
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; padding: 0 4px;">* AI 분석에
-                        포함되지 않는 단순 참고용 데이터입니다.</p>
                 </div>
 
                 <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
             </div>
 
-            <!-- Persistent Action Footer -->
-            <div class="panel-footer"
-                style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; align-items: center; justify-content: center; margin-top: auto;">
-                <button class="btn w-100 d-flex align-items-center justify-content-center gap-2" type="button"
-                    id="open-report-modal"
-                    style="border-radius: 8px; padding: 10px; background-color: #1A73E8; color: white; border: none; font-size: 14px; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.15);">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">article</span>
-                    <span style="font-weight: 600;">보고서 생성</span>
-                </button>
-            </div>
+
         </aside>
     </div>
 
-    <!-- Summary Expand Modal -->
-    <div id="summary-modal" class="modal-overlay">
-        <div class="modal-content-large">
-            <div class="modal-header">
-                <h3>회사소개</h3>
-                <button class="btn-close" id="close-summary-modal">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body" style="flex-direction: column; gap: 15px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label style="font-weight: 600; min-width: 60px;">회사명</label>
-                    <input type="text" id="modal-company-name-text"
-                        style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #FFFFFF; color: #334155;"
-                        placeholder="회사명을 입력하세요...">
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label style="font-weight: 600; min-width: 60px;">산업</label>
-                    <div style="flex: 1; position: relative; display: flex; align-items: center;">
-                        <select id="modal-industry-text"
-                            style="width: 100%; padding: 10px 40px 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #FFFFFF; color: #334155;">
-                            <option value="AI">AI</option>
-                            <option value="IT·정보통신">IT·정보통신</option>
-                            <option value="SaaS·솔루션">SaaS·솔루션</option>
-                            <option value="게임">게임</option>
-                            <option value="공공·국방">공공·국방</option>
-                            <option value="관광·레저">관광·레저</option>
-                            <option value="교육·에듀테크">교육·에듀테크</option>
-                            <option value="금융·핀테크">금융·핀테크</option>
-                            <option value="농·임·어업">농·임·어업</option>
-                            <option value="라이프스타일">라이프스타일</option>
-                            <option value="모빌리티">모빌리티</option>
-                            <option value="문화예술·콘텐츠">문화예술·콘텐츠</option>
-                            <option value="바이오·헬스케어">바이오·헬스케어</option>
-                            <option value="부동산">부동산</option>
-                            <option value="뷰티·패션">뷰티·패션</option>
-                            <option value="에너지·환경">에너지·환경</option>
-                            <option value="외식업·소상공인">외식업·소상공인</option>
-                            <option value="우주·항공">우주·항공</option>
-                            <option value="유통·물류">유통·물류</option>
-                            <option value="제조·건설">제조·건설</option>
-                            <option value="플랫폼·커뮤니티">플랫폼·커뮤니티</option>
-                            <option value="기타" selected>기타</option>
-                        </select>
-                        <button id="generate-industry"
-                            style="position: absolute; right: 10px; background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
-                            <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
-                        </button>
-                    </div>
-                </div>
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; position: relative;">
-                    <label style="font-weight: 600;">회사소개</label>
-                    <div style="flex: 1; position: relative;">
-                        <textarea id="modal-summary-text"
-                            style="width: 100%; height: 100%; padding: 10px 40px 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; resize: none; min-height: 250px; background: #FFFFFF; color: #334155;"
-                            placeholder="회사소개 내용을 입력하세요..."></textarea>
-                        <button id="generate-summary"
-                            style="position: absolute; top: 10px; right: 10px; background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
-                            <span class="material-symbols-outlined" style="font-size: 20px;">auto_awesome</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-primary" id="save-summary">완료</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Share Options Modal -->
-    <div class="modal-overlay" id="share-options-modal" style="display: none;">
-        <div class="modal-content border-0"
-            style="width: 380px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; background-color: #ffffff !important;">
-            <div class="modal-header border-0 pb-0 pt-4 px-4" style="background-color: #ffffff !important;">
-                <h5 class="modal-title fw-bold" id="shareOptionsLabel"
-                    style="font-size: 18px; color: #1e293b; margin: 0;">기업내역 공유 방식 선택</h5>
-                <button type="button" class="btn-close" id="close-share-options" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4" style="background-color: #ffffff !important;">
-                <div class="d-flex flex-column gap-3 w-100">
-                    <!-- Direct Share with Team Member Option Hidden
-                    <button type="button" id="btn-share-with-user-trigger"
-                        class="share-option-btn share-option-user d-flex align-items-center justify-content-between p-3 rounded-4"
-                        style="width: 100%; font-weight: 600; font-size: 15px; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #ffffff;">
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="material-symbols-outlined p-2 icon-bg"
-                                style="background: #f1f5f9; color: #64748b; border-radius: 12px; font-size: 24px; transition: all 0.2s;">group</span>
-                            <div class="text-start">
-                                <div class="title-text" style="color: #475569; transition: all 0.2s;">팀원에게 직접 공유</div>
-                                <div style="font-size: 12px; color: #94a3b8; font-weight: normal;">딜챗 유저에게 기업 노트를 전달합니다.</div>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined chevron" style="color: #cbd5e1; transition: all 0.2s;">chevron_right</span>
-                    </button>
-                    -->
 
-                    <button type="button" id="btn-share-url-db"
-                        class="share-option-btn share-option-link d-flex align-items-center justify-content-between p-3 rounded-4"
-                        style="width: 100%; font-weight: 600; font-size: 15px; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #ffffff;">
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="material-symbols-outlined p-2 icon-bg"
-                                style="background: #f1f5f9; color: #64748b; border-radius: 12px; font-size: 24px; transition: all 0.2s;">link</span>
-                            <div class="text-start">
-                                <div class="title-text" style="color: #475569; transition: all 0.2s;">URL 주소 복사</div>
-                                <div style="font-size: 12px; color: #94a3b8; font-weight: normal;">현재 기업의 공개 링크를 복사합니다.
-                                </div>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined chevron"
-                            style="color: #cbd5e1; transition: all 0.2s;">content_copy</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- User Share Modal (Internal) -->
-    <div class="modal-overlay" id="user-share-modal"
-        style="display: none; justify-content: center; align-items: center;">
-        <div class="modal-content border-0 shadow-lg"
-            style="width: 450px; border-radius: 20px; background-color: #ffffff !important; overflow: hidden; display: block !important; margin: auto;">
-            <div class="modal-header border-0 pb-0 pt-4 px-4" style="background-color: #ffffff !important;">
-                <h3 style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;">기업 공유하기</h3>
-                <button class="btn-close" id="close-user-share" style="background: none; border: none; color: #64748b;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body p-4"
-                style="background-color: #ffffff !important; display: flex; flex-direction: column; gap: 20px; width: 100%;">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">공유할 대상을 선택하고 메모를 남겨주세요.</p>
 
-                <div style="background-color: #ffffff !important; width: 100%;">
-                    <label
-                        style="font-weight: 700; font-size: 13px; color: #475569; margin-bottom: 8px; display: block;">수신자</label>
-                    <select id="direct-share-receiver"
-                        style="width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; background: #ffffff !important; color: #1e293b;">
-                        <option value="">수신자를 선택하세요...</option>
-                    </select>
-                </div>
 
-                <div style="background-color: #ffffff !important;">
-                    <label
-                        style="font-weight: 700; font-size: 13px; color: #475569; margin-bottom: 8px; display: block;">전달
-                        메모 (선택)</label>
-                    <textarea id="direct-share-memo"
-                        style="width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; background: #ffffff !important; color: #1e293b; min-height: 100px; resize: none;"
-                        placeholder="메모를 입력하세요..."></textarea>
-                </div>
 
-                <div style="display: flex; gap: 12px; margin-top: 10px; background-color: #ffffff !important;">
-                    <button id="cancel-user-share"
-                        style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer;">취소</button>
-                    <button id="submit-user-share"
-                        style="flex: 2; padding: 12px; border-radius: 12px; border: none; background: #1A73E8; color: white; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">공유하기</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Selection Modal -->
-    <div id="report-selection-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content-report"
-            style="width: 700px; max-height: 90vh; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;">
-            <div class="report-modal-header"
-                style="background: #1A73E8; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
-                <h3
-                    style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                    <span class="material-symbols-outlined">auto_awesome_motion</span> 보고서 생성
-                </h3>
-                <button class="btn-close-dark" id="close-report-modal"
-                    style="background: none; border: none; cursor: pointer; color: white;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="report-modal-body" style="padding: 24px; overflow-y: auto; background: #f8fafc;">
-                <h5 style="font-size: 15px; font-weight: 700; color: #334155; margin-bottom: 16px;">형식 선택</h5>
-                <div id="report-grid-format"
-                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px;">
-                    <!-- Report format cards -->
-                </div>
-
-                <h5 style="font-size: 15px; font-weight: 700; color: #334155; margin-bottom: 16px;">추천 리포트</h5>
-                <div id="report-grid-recommended"
-                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    <!-- Recommended report cards -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Generation Detail Modal -->
-    <div class="modal-overlay" id="report-gen-detail-modal" style="display: none;">
-        <div class="modal-content-report"
-            style="width: 600px; max-height: 90vh; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;">
-            <div class="report-modal-header"
-                style="background: #1A73E8; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button id="back-to-selection"
-                        style="background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center;">
-                        <span class="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <h3 id="selected-report-title"
-                        style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700;">투자 검토 보고서</h3>
-                </div>
-                <button class="btn-close-dark" id="close-gen-detail-modal"
-                    style="background: none; border: none; cursor: pointer; color: white;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="report-modal-body"
-                style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: #ffffff;">
-                <p id="selected-report-desc" style="font-size: 14px; color: #64748b; line-height: 1.6; margin: 0;">투자
-                    관점에서의 기회를 분석합니다.</p>
-
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <label style="font-size: 14px; font-weight: 700; color: #334155;">리포트 작성 지시사항 (수정 가능)</label>
-                    <textarea id="report-instruction"
-                        style="width: 100%; height: 200px; padding: 15px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; resize: none; outline: none; transition: border-color 0.2s;"
-                        placeholder="보고서에 포함하고 싶은 특별한 요청이 있다면 적어주세요..."></textarea>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <label style="font-size: 14px; font-weight: 700; color: #334155;">언어 설정</label>
-                    <select id="report-language"
-                        style="flex: 1; padding: 10px 15px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; color: #1e293b; outline: none;">
-                        <option value="Korean" selected>한국어 (국문)</option>
-                        <option value="English">영어 (영문)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="report-modal-footer"
-                style="padding: 20px 24px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px;">
-                <button class="btn btn-primary" id="start-generate-report"
-                    style="flex: 1; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 15px;">생성하기</button>
-            </div>
-        </div>
-    </div>
 
     <style>
         .form-group-row {
@@ -821,6 +604,41 @@
             border-color: var(--primary-color) !important;
         }
 
+        /* 드래그 앤 드롭 시각적 피드백 */
+        #training-drop-zone {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        #training-drop-zone.drag-over {
+            border: 2px dashed #1A73E8 !important;
+            background-color: rgba(26, 115, 232, 0.05) !important;
+            box-shadow: 0 0 15px rgba(26, 115, 232, 0.2) !important;
+        }
+
+        /* 드래그 중인 영역 안내 문구 */
+        #training-drop-zone.drag-over::after {
+            content: "여기에 드롭하여 파일 업로드";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            color: #1A73E8;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1px solid #1A73E8;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        #training-drop-zone.drag-over * {
+            pointer-events: none;
+        }
+
         /* Input with unit */
         .input-with-unit {
             flex: 1;
@@ -891,8 +709,7 @@
 
         /* Modal Content Overrides for Dark Theme */
         .modal-content,
-        .modal-content-large,
-        .modal-content-report {
+        .modal-content-large {
             background-color: var(--bg-card) !important;
             color: var(--text-main) !important;
             border: 1px solid var(--border-color) !important;
@@ -907,8 +724,7 @@
             border-color: var(--border-color) !important;
         }
 
-        .modal-header h3,
-        .report-modal-title span {
+        .modal-header h3 {
             color: var(--text-main) !important;
         }
 
@@ -968,249 +784,7 @@
     </style>
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Register Deal Modal -->
-    <div id="register-deal-modal" class="modal-overlay">
-        <div class="modal-content-large" style="height: auto; max-height: 90vh;">
-            <div class="modal-header">
-                <h3>매물 등록 <small>(중복등록가능)</small></h3>
-                <button class="btn-close" id="close-register-modal">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body" style="display: block; overflow-y: auto; padding: 30px; background-color: #0d213e;">
-                <form id="register-deal-form">
-                    <div class="form-group-row">
-                        <label>기업명</label>
-                        <input type="text" name="company_name" placeholder="기업명을 입력하세요">
-                    </div>
-                    <div class="form-group-row">
-                        <label>요약</label>
-                        <textarea name="summary" placeholder="핵심 요약 내용을 입력하세요" rows="2"></textarea>
-                    </div>
-                    <div class="form-group-row">
-                        <label>업종</label>
-                        <select name="industry"
-                            style="flex: 1; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background-color: var(--bg-input); color: var(--text-main);">
-                            <option value="AI">AI</option>
-                            <option value="IT·정보통신">IT·정보통신</option>
-                            <option value="SaaS·솔루션">SaaS·솔루션</option>
-                            <option value="게임">게임</option>
-                            <option value="공공·국방">공공·국방</option>
-                            <option value="관광·레저">관광·레저</option>
-                            <option value="교육·에듀테크">교육·에듀테크</option>
-                            <option value="금융·핀테크">금융·핀테크</option>
-                            <option value="농·임·어업">농·임·어업</option>
-                            <option value="라이프스타일">라이프스타일</option>
-                            <option value="모빌리티">모빌리티</option>
-                            <option value="문화예술·콘텐츠">문화예술·콘텐츠</option>
-                            <option value="바이오·헬스케어">바이오·헬스케어</option>
-                            <option value="부동산">부동산</option>
-                            <option value="뷰티·패션">뷰티·패션</option>
-                            <option value="에너지·환경">에너지·환경</option>
-                            <option value="외식업·소상공인">외식업·소상공인</option>
-                            <option value="우주·항공">우주·항공</option>
-                            <option value="유통·물류">유통·물류</option>
-                            <option value="제조·건설">제조·건설</option>
-                            <option value="플랫폼·커뮤니티">플랫폼·커뮤니티</option>
-                            <option value="기타" selected>기타</option>
-                        </select>
-                    </div>
-                    <div class="form-group-row">
-                        <label>매각방식</label>
-                        <select name="sale_method"
-                            style="flex: 1; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none;">
-                            <option value="">매각방식을 선택하세요</option>
-                            <option value="경영권 매각">경영권 매각</option>
-                            <option value="구주 매각">구주 매각</option>
-                            <option value="신주 발행">신주 발행</option>
-                            <option value="자산 매각">자산 매각</option>
-                            <option value="기타">기타</option>
-                        </select>
-                    </div>
-                    <div class="form-group-row">
-                        <label>매각금액</label>
-                        <div class="input-with-unit">
-                            <input type="text" name="sale_price" placeholder="금액을 입력하세요">
-                            <span class="unit">억원</span>
-                        </div>
-                    </div>
-                    <div class="form-group-row">
-                        <label>등록자</label>
-                        <input type="text" name="registrant" placeholder="이름을 입력하세요" readonly>
-                    </div>
-                    <div class="form-group-row">
-                        <label>기타사항</label>
-                        <textarea name="others" placeholder="기타 특이사항을 입력하세요" rows="3"></textarea>
-                    </div>
 
-                    <div class="form-group-row" style="align-items: flex-start;">
-                        <label>공유 파일</label>
-                        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
-                            <input type="text" id="share-file-input" placeholder="파일명을 입력하고 Enter를 누르세요"
-                                style="width: 100%;">
-                            <div id="shared-files-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                <!-- File chips will be injected here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-                        <div class="form-group-row" style="align-items: flex-start;">
-                            <label>공유 설정</label>
-                            <div style="flex: 1; display: flex; flex-direction: column; gap: 15px;">
-                                <div style="display: flex; gap: 20px;">
-                                    <label
-                                        style="width: auto; font-weight: 400; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                                        <input type="radio" name="share_type" value="public" checked
-                                            style="width: auto; margin: 0;"> 전체 공개
-                                    </label>
-                                    <label
-                                        style="width: auto; font-weight: 400; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                                        <input type="radio" name="share_type" value="private"
-                                            style="width: auto; margin: 0;"> 비공개
-                                    </label>
-                                    <label
-                                        style="width: auto; font-weight: 400; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                                        <input type="radio" name="share_type" value="select"
-                                            style="width: auto; margin: 0;"> 대상 선택
-                                    </label>
-                                </div>
-
-                                <div id="share-target-wrapper"
-                                    style="display: none; flex-direction: column; gap: 10px;">
-                                    <input type="text" id="share-with-input" placeholder="이름을 입력하고 Enter를 누르세요"
-                                        style="width: 100%;">
-                                    <div id="share-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                        <!-- Tags will be injected here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-primary" id="save-deal" style="padding: 10px 25px;">등록</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Source Option Modal -->
-    <div id="source-option-modal" class="modal-overlay">
-        <div class="modal-content"
-            style="max-width: 400px; padding: 0; background-color: #ffffff !important; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
-            <div class="modal-header"
-                style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
-                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">소스 추가</h3>
-                <button class="btn-close" id="close-source-option-modal" style="color: #ffffff !important; opacity: 1;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 24px;">
-                <button class="btn w-100 d-flex align-items-center gap-3 p-3" id="btn-upload-local"
-                    style="border-radius: 12px; text-align: left; transition: all 0.2s; background-color: #ffffff !important; border: 1px solid #e2e8f0; color: #1e293b;">
-                    <span class="material-symbols-outlined" style="color: #1A73E8; font-size: 24px;">upload_file</span>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-weight: 600; font-size: 15px; color: #1e293b;">내 PC에서 업로드</span>
-                        <span style="font-size: 12px; color: #64748b;">PDF, DOCX, TXT 파일 지원</span>
-                    </div>
-                </button>
-                <button class="btn w-100 d-flex align-items-center gap-3 p-3" id="btn-select-internal"
-                    style="border-radius: 12px; text-align: left; transition: all 0.2s; background-color: #ffffff !important; border: 1px solid #e2e8f0; color: #1e293b;">
-                    <span class="material-symbols-outlined" style="color: #1A73E8; font-size: 24px;">home_storage</span>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-weight: 600; font-size: 15px; color: #1e293b;">딜챗 파일에서 선택</span>
-                        <span style="font-size: 12px; color: #64748b;">이미 업로드된 내 파일 목록에서 선택</span>
-                    </div>
-                </button>
-                <button class="btn w-100 d-flex align-items-center gap-3 p-3" id="btn-input-text"
-                    style="border-radius: 12px; text-align: left; transition: all 0.2s; background-color: #ffffff !important; border: 1px solid #e2e8f0; color: #1e293b;">
-                    <span class="material-symbols-outlined" style="color: #1A73E8; font-size: 24px;">edit_note</span>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-weight: 600; font-size: 15px; color: #1e293b;">텍스트 직접 입력</span>
-                        <span style="font-size: 12px; color: #64748b;">텍스트를 입력하여 파일로 저장</span>
-                    </div>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Internal File Selection Modal -->
-    <div id="internal-file-modal" class="modal-overlay">
-        <div class="modal-content-large" style="max-width: 600px; height: 70vh;">
-            <div class="modal-header"
-                style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
-                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">내 파일에서 선택</h3>
-                <button class="btn-close" id="close-internal-file-modal" style="color: #ffffff !important; opacity: 1;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body"
-                style="flex-direction: column; padding: 20px; overflow: hidden; background-color: #ffffff !important;">
-                <div class="search-box mb-3" style="position: relative;">
-                    <span class="material-symbols-outlined"
-                        style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 20px;">search</span>
-                    <input type="text" id="internal-file-search" class="form-control" placeholder="파일명으로 검색..."
-                        style="padding-left: 40px; border-radius: 10px; height: 45px; border: 1px solid #e2e8f0; background-color: #ffffff; color: #1e293b;">
-                </div>
-                <div id="internal-file-list-container"
-                    style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc !important;">
-                    <ul id="internal-file-list" class="list-group list-group-flush">
-                        <!-- Internal files will be listed here -->
-                        <li class="list-group-item text-center py-5 text-secondary">파일을 불러오는 중...</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer"
-                style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background-color: #ffffff !important; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
-                <button class="btn btn-secondary" id="cancel-internal-selection"
-                    style="border-radius: 20px; padding: 8px 20px; background-color: #f1f5f9; border: none; color: #64748b;">취소</button>
-                <button class="btn btn-primary" id="confirm-internal-select"
-                    style="border-radius: 20px; padding: 8px 25px; background-color: #1A73E8; border: none;">추가하기 (<span
-                        id="selected-count">0</span>)</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Text Input Modal -->
-    <div id="text-input-modal" class="modal-overlay">
-        <div class="modal-content-large" style="max-width: 700px; height: 80vh;">
-            <div class="modal-header"
-                style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
-                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">텍스트 직접 입력</h3>
-                <button class="btn-close" id="close-text-input-modal" style="color: #ffffff !important; opacity: 1;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="modal-body"
-                style="flex-direction: column; padding: 24px; gap: 20px; background-color: #ffffff !important;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <label style="font-weight: 600; font-size: 14px; color: #1e293b;">파일명</label>
-                    <input type="text" id="text-input-filename" class="form-control"
-                        placeholder="파일명을 입력하세요 (예: 회사소개.txt)"
-                        style="padding: 10px 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; outline: none; background-color: #ffffff; color: #1e293b;">
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
-                    <label style="font-weight: 600; font-size: 14px; color: #1e293b;">내용</label>
-                    <textarea id="text-input-content" class="form-control" placeholder="텍스트 내용을 입력하세요..."
-                        style="flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; outline: none; resize: none; font-family: inherit; line-height: 1.6; background-color: #ffffff !important; color: #1e293b;"></textarea>
-                </div>
-                <div
-                    style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #f8fafc; border-radius: 8px;">
-                    <span class="material-symbols-outlined" style="color: #64748b; font-size: 20px;">info</span>
-                    <span style="font-size: 13px; color: #64748b;">입력한 텍스트는 서버에 파일로 저장되고 벡터 DB에도
-                        저장됩니다.</span>
-                </div>
-            </div>
-            <div class="modal-footer"
-                style="padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background-color: #ffffff !important; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
-                <button class="btn btn-secondary" id="cancel-text-input"
-                    style="border-radius: 20px; padding: 8px 20px; background-color: #f1f5f9; border: none; color: #64748b;">취소</button>
-                <button class="btn btn-primary" id="save-text-input"
-                    style="border-radius: 20px; padding: 8px 25px; background-color: #1A73E8; border: none;">저장하기</button>
-            </div>
-        </div>
-    </div>
 
 
     </div> <!-- app-container 닫기 -->
@@ -1233,119 +807,136 @@
             flex: 0 0 25% !important;
             width: 25% !important;
             max-width: 25% !important;
-            border-left: 1px solid var(--border-color);
-        }
-
-        /* Modal Share Option Buttons */
-        .share-option-btn {
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            width: 100%;
-        }
-
-        /* Modal Share Option Buttons Hover (Unified Blue) */
-        .share-option-btn:hover {
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.12);
-            transform: translateY(-2px);
-            border-color: #1A73E8 !important;
-            background-color: #f0f7ff !important;
-        }
-
-        .share-option-btn:hover .icon-bg {
-            background-color: #e0e7ff !important;
-            color: #1A73E8 !important;
-        }
-
-        .share-option-btn:hover .title-text {
-            color: #1A73E8 !important;
-        }
-
-        .share-option-btn:hover .chevron {
-            color: #1A73E8 !important;
-        }
-
-        /* Report Cards */
-        .report-card {
-            background: #ffffff;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .report-card:hover {
-            border-color: #1A73E8;
-            background-color: #f0f7ff;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(26, 115, 232, 0.08);
-        }
-
-        .report-card.primary {
-            border-color: #1A73E8;
-            background-color: #f0f7ff;
-        }
-
-        .report-card.primary:hover {
-            background-color: #e3f0ff;
-        }
-
-        .report-card h5 {
-            margin: 0;
-            font-size: 15px;
-            font-weight: 700;
-            color: #1e293b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .report-card p {
-            margin: 0;
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.5;
         }
     </style>
 
+    <!-- [Restructured] Modals moved outside app-container for layout stability -->
+
+    <!-- Summary Edit Modal -->
+    <div id="summary-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content-large" style="width: 800px; height: 85vh;">
+            <div class="modal-header" style="background-color: #1A73E8 !important;">
+                <h3 id="modal-title" style="color: #ffffff !important;">기업 개요 수정</h3>
+                <button class="btn-close" id="close-summary-modal" style="color: #ffffff !important; opacity: 1;">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="background-color: #ffffff !important;">
+                <textarea id="summary-editor" style="width: 100%; height: 100%; border: none; outline: none; padding: 20px; font-size: 15px; line-height: 1.8; color: #1e293b;"></textarea>
+            </div>
+            <div class="modal-footer" style="background-color: #ffffff !important; border-top: 1px solid #f1f5f9;">
+                <button class="btn btn-secondary" id="cancel-summary-edit" style="border-radius: 20px; padding: 8px 25px;">취소</button>
+                <button class="btn btn-primary" id="save-summary-edit" style="border-radius: 20px; padding: 8px 30px; background-color: #1A73E8;">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+    <!-- Register Deal Modal -->
+    <div id="register-deal-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content-large" style="height: auto; max-height: 90vh;">
+            <div class="modal-header">
+                <h3>매물 등록 <small>(중복등록가능)</small></h3>
+                <button class="btn-close" id="close-register-modal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="display: block; overflow-y: auto; padding: 30px; background-color: #0d213e;">
+                <form id="register-deal-form">
+                    <div class="form-group-row"><label>기업명</label><input type="text" name="company_name" placeholder="기업명을 입력하세요"></div>
+                    <div class="form-group-row"><label>요약</label><textarea name="summary" placeholder="핵심 요약 내용을 입력하세요" rows="2"></textarea></div>
+                    <div class="form-group-row">
+                        <label>업종</label>
+                        <select name="industry" style="flex: 1; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background-color: var(--bg-input); color: var(--text-main);">
+                            <option value="기타" selected>기타</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn-primary" id="save-deal" style="padding: 10px 25px;">등록</button></div>
+        </div>
+    </div>
+
+    <!-- Source Option Modal -->
+    <div id="source-option-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; padding: 0; background-color: #ffffff !important; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden;">
+            <div class="modal-header" style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
+                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">소스 추가</h3>
+                <button class="btn-close" id="close-source-option-modal" style="color: #ffffff !important; opacity: 1;"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 24px;">
+                <button class="btn w-100 d-flex align-items-center gap-3 p-3" id="btn-upload-local" style="border-radius: 12px; text-align: left; transition: all 0.2s; background-color: #ffffff !important; border: 1px solid #e2e8f0; color: #1e293b;">
+                    <span class="material-symbols-outlined" style="color: #1A73E8; font-size: 24px;">upload_file</span>
+                    <div style="display: flex; flex-direction: column;"><span style="font-weight: 600; font-size: 15px; color: #1e293b;">내 PC에서 업로드</span><span style="font-size: 12px; color: #64748b;">PDF, DOCX, TXT 파일 지원</span></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Internal File Selection Modal -->
+    <div id="internal-file-modal" class="modal-overlay">
+        <div class="modal-content-large" style="max-width: 600px; height: 70vh;">
+            <div class="modal-header" style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
+                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">내 파일에서 선택</h3>
+                <button class="btn-close" id="close-internal-file-modal" style="color: #ffffff !important; opacity: 1;"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body" style="flex-direction: column; padding: 20px; overflow: hidden; background-color: #ffffff !important;">
+                <div id="internal-file-list-container" style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc !important;">
+                    <ul id="internal-file-list" class="list-group list-group-flush"><li class="list-group-item text-center py-5 text-secondary">파일을 불러오는 중...</li></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Input Modal -->
+    <div id="text-input-modal" class="modal-overlay">
+        <div class="modal-content-large" style="max-width: 700px; height: 80vh;">
+            <div class="modal-header" style="background-color: #1A73E8 !important; border-bottom: none; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 16px 24px;">
+                <h3 style="margin: 0; font-size: 18px; color: #ffffff !important;">텍스트 직접 입력</h3>
+                <button class="btn-close" id="close-text-input-modal" style="color: #ffffff !important; opacity: 1;"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body" style="flex-direction: column; padding: 24px; gap: 20px; background-color: #ffffff !important;">
+                <textarea id="text-input-content" class="form-control" placeholder="텍스트 내용을 입력하세요..." style="flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; outline: none; resize: none; font-family: inherit; line-height: 1.6; background-color: #ffffff !important; color: #1e293b;"></textarea>
+            </div>
+        </div>
+    </div>
+
     <!-- NDA Modal -->
-    <div class="modal fade" id="nda-modal" tabindex="-1" aria-labelledby="ndaModalLabel" aria-hidden="true"
-        style="z-index: 1060;">
+    <div class="modal fade" id="nda-modal" tabindex="-1" aria-labelledby="ndaModalLabel" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0"
-                style="border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;">
-                <div
-                    class="modal-header border-0 pb-0 pt-4 px-4 bg-white d-flex align-items-center justify-content-between">
-                    <h5 class="modal-title fw-bold" id="ndaModalLabel"
-                        style="font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
-                        <span class="material-symbols-outlined"
-                            style="color: #1A73E8; font-size: 28px;">verified_user</span>
+            <div class="modal-content border-0" style="border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;">
+                <div class="modal-header border-0 pb-0 pt-4 px-4 bg-white d-flex align-items-center justify-content-between">
+                    <h5 class="modal-title fw-bold" id="ndaModalLabel" style="font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+                        <span class="material-symbols-outlined" style="color: #1A73E8; font-size: 28px;">verified_user</span>
                         비밀유지확약서 (NDA)
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4 bg-white">
-                    <div class="nda-content-box p-4 mb-4"
-                        style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; font-size: 13.5px; color: #475569; line-height: 1.8; max-height: 280px; overflow-y: auto;">
-                        <p class="mb-3 fw-bold"
-                            style="color: #1e293b; font-size: 15px; border-bottom: 2px solid #e0f2fe; padding-bottom: 8px;">
-                            [정보 제공에 관한 비밀유지 의무]</p>
-                        본인은 'DealChat' 서비스를 통해 제공받는 기업의 모든 정보(재무 현황, 영업 기밀, 거래 조건 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을
-                        확약합니다.<br><br>
-                        <span style="color: #1A73E8; font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적
-                        이외의 용도로 사용하지 아니한다.<br><br>
-                        <span style="color: #1A73E8; font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게
-                        누설하거나 공개하지 아니한다.<br><br>
-                        <span style="color: #1A73E8; font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가
-                        발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
+                    <div class="nda-content-box p-4 mb-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; font-size: 13.5px; color: #475569; line-height: 1.8; max-height: 280px; overflow-y: auto;">
+                        <p class="mb-3 fw-bold" style="color: #1e293b; font-size: 15px; border-bottom: 2px solid #f0f7ff; padding-bottom: 8px;">[정보 제공에 관한 비밀유지 의무]</p>
+                        본인은 'DealChat' 서비스를 통해 제공받는 기업의 모든 정보(재무 현황, 영업 기밀, 거래 조건 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을 확약합니다.<br><br>
+                        <span style="color: #1A73E8; font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적 이외의 용도로 사용하지 아니한다.<br><br>
+                        <span style="color: #1A73E8; font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게 누설하거나 공개하지 아니한다.<br><br>
+                        <span style="color: #1A73E8; font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가 발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
                         위의 내용을 충분히 숙지하였으며, 신의성실의 원칙에 따라 동의합니다.
                     </div>
 
+                    <div id="nda-access-key-section" style="display: none; margin-bottom: 24px;">
+                        <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">접근 키 입력 (최대 3회 접근 가능)</label>
+                        <div class="input-group">
+                            <input type="text" id="nda-access-key" class="form-control" placeholder="6자리 영문/숫자 키를 입력해주세요" 
+                                style="border-radius: 12px; font-size: 15px; padding: 14px 18px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s; text-transform: uppercase;">
+                        </div>
+                        <p class="small mt-2 mb-0" style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
+                            * 전달받은 6자리 접근 키를 입력하시면 서명 가이드가 활성화됩니다.
+                        </p>
+                    </div>
+                    
                     <div class="signature-section" style="padding: 10px 5px;">
                         <div class="mb-4">
                             <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">서명 (성함 입력)</label>
@@ -1360,7 +951,7 @@
 
                         <div class="mb-2">
                             <label class="form-label fw-bold mb-2" style="font-size: 15px; color: #1e293b;">동의 문구 확인</label>
-                            <p class="mb-3" style="color: #1A73E8; font-size: 16px; background: #f0f7ff; padding: 16px; border-radius: 12px; border: 1px dashed #1A73E8; text-align: center;">
+                            <p class="mb-3" style="color: #1A73E8; font-size: 16px; background: #f0f7ff; padding: 16px; border-radius: 12px; border: 1px dashed #1A73E8; text-align: center; margin-bottom: 12px !important;">
                                 <strong style="font-size: 18px; display: block; margin-bottom: 4px;">위 사항을 위반하지 않을 것을 약속합니다</strong>
                                 <span style="font-size: 13px; color: #64748b; font-weight: 500;">* 위 문구를 아래 박스에 똑같이 입력해주세요.</span>
                             </p>
@@ -1372,22 +963,24 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
-                    <button type="button" class="btn px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal"
+                    <button type="button" id="nda-modal-cancel-btn" class="btn px-4 py-2 rounded-pill fw-bold"
                         style="background: #f1f5f9; color: #64748b; font-size: 15px; flex: 1; height: 50px;">취소</button>
                     <button type="button" id="btn-confirm-nda" class="btn btn-primary px-4 py-2 rounded-pill fw-bold" disabled
-                        style="background: #1A73E8; border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의
-                        및 상세 보기</button>
+                        style="background: #1A73E8; border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의 및 리포트 보기</button>
                 </div>
             </div>
         </div>
     </div>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- PDF & DOCX Parsing & Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/front-config.js"></script>
     <script src="../js/dealbook_companies.js?v=20260308_08" type="module"></script>
 </body>

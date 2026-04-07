@@ -9,7 +9,12 @@
  * @returns {Object|null} User data if logged in, null otherwise.
  */
 export function checkAuth() {
-    const userData = JSON.parse(localStorage.getItem('dealchat_users'));
+    let userData = null;
+    try {
+        userData = JSON.parse(localStorage.getItem('dealchat_users'));
+    } catch (e) {
+        console.warn('checkAuth: localStorage 파싱 실패', e);
+    }
     if (!userData || !userData.isLoggedIn) {
         alert('로그인 후 이용해주세요.');
         // Adjust path based on current location
@@ -113,12 +118,22 @@ export function initUserMenu() {
  * Shows the global loading overlay.
  */
 export function showLoader() {
-    // Disabled as requested
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.style.opacity = '1';
+    }
 }
 
 /**
  * Hides the global loading overlay with a fade effect.
  */
 export function hideLoader() {
-    // Disabled as requested
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 300);
+    }
 }

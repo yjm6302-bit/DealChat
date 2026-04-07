@@ -51,11 +51,7 @@ $(document).ready(function () {
             headerName: "수정일",
             sortable: true,
             flex: 0.8,
-            valueFormatter: params => params.value ? new Date(params.value).toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }) : ""
+            valueFormatter: params => { if (!params.value) return ""; const d = new Date(params.value); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; }
         },
         {
             headerName: "다운로드",
@@ -159,7 +155,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Summary Error:', error);
-            alert('요약 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('요약 생성 중 오류가 발생했습니다.');
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }
@@ -186,7 +187,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Tags Error:', error);
-            alert('태그 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('태그 생성 중 오류가 발생했습니다.');
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }

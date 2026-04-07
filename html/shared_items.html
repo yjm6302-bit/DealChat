@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공유목록 - DealChat</title>
+    <title>공유 목록 - DealChat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,379 +16,194 @@
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-
-    <style>
-        /* ── Navy Theme Variables ── */
-        :root {
-            --navy: #1E293B;
-            --navy-mid: #334155;
-            --navy-light: #f1f5f9;
-            --navy-border: #cbd5e1;
-        }
-
-        /* ── Search Button ── */
-        #search-btn {
-            padding: 10px 32px;
-            border-radius: 30px;
-            background: var(--navy);
-            border: none;
-            font-size: 15px;
-            font-weight: 600;
-            color: #fff;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(30, 55, 100, 0.25);
-            transition: background 0.2s;
-        }
-
-        #search-btn:hover { background: var(--navy-mid); }
-
-        /* ── Sort dropdown ── */
-        #sort-dropdown-btn {
-            background: #fff !important;
-            color: #000 !important;
-            opacity: 1 !important;
-        }
-
-        #current-sort-label { color: #000 !important; }
-
-        .dropdown-menu {
-            background: #fff !important;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-
-        .dropdown-item { color: #000 !important; }
-        .dropdown-item:hover { background: #f1f5f9 !important; }
-        .dropdown-item.active { background: var(--navy) !important; color: #fff !important; }
-
-        /* ── Direction Tabs (수신/발신) ── */
-        .dir-tab-btn {
-            padding: 10px 28px;
-            border-radius: 10px;
-            border: 1.5px solid #e2e8f0;
-            background: #fff;
-            color: #64748b;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .dir-tab-btn.active {
-            background: var(--navy) !important;
-            border-color: var(--navy) !important;
-            color: #fff !important;
-        }
-
-        /* ── Type Tab Buttons ── */
-        .type-tab-btn {
-            padding: 8px 20px;
-            border-radius: 20px;
-            border: 1.5px solid #e2e8f0;
-            background: #fff;
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .type-tab-btn.active {
-            background: var(--navy) !important;
-            border-color: var(--navy) !important;
-            color: #fff !important;
-        }
-
-        /* ── List Row ── */
-        .shared-list-row {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            border-bottom: 1px solid #f1f5f9;
-            cursor: pointer;
-            transition: background 0.15s;
-            gap: 16px;
-        }
-
-        .shared-list-row:first-child { border-radius: 16px 16px 0 0; }
-        .shared-list-row:last-child  { border-bottom: none; border-radius: 0 0 16px 16px; }
-        .shared-list-row:only-child  { border-radius: 16px; }
-
-        .shared-list-row:hover {
-            background: var(--navy-light);
-        }
-
-        /* ── List Header ── */
-        .list-header {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            gap: 16px;
-            background: var(--navy);
-            border-radius: 12px 12px 0 0;
-            border: 1px solid var(--navy);
-            border-bottom: none;
-            font-size: 13px;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: 0.5px;
-        }
-
-        /* ── Pagination ── */
-        .pg-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #e2e8f0;
-            background: #fff;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .pg-btn:hover:not(:disabled) {
-            background: var(--navy);
-            border-color: var(--navy);
-            color: #fff;
-        }
-
-        .pg-btn.active {
-            background: var(--navy);
-            border-color: var(--navy);
-            color: #fff;
-        }
-
-        .pg-btn:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-        }
-        /* Inbox Delete Button States */
-        #btn-delete-inbox:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        #btn-delete-inbox:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    </style>
 </head>
 
 <body>
+    <!-- Global Loading Overlay -->
     <div id="global-loader">
         <div class="loader-logo">DealChat</div>
         <div class="loader-text">데이터를 불러오는 중입니다...</div>
     </div>
 
     <div class="app-container">
-        <main class="main-content dashboard-bg"
-            style="display: flex; flex-direction: column; overflow-y: auto; flex: 1; height: 100vh;">
-            <header id="global-header" class="top-bar" style="border-bottom: none;"></header>
+        <main class="main-content dashboard-bg">
+            <header id="global-header" class="top-bar"></header>
 
-            <section class="page-content"
-                style="flex: 1; display: flex; flex-direction: column; padding: 20px 40px 56px; max-width: 1400px; margin: 0 auto; width: 100%;">
-
-                <!-- 기존 콘텐츠 비활성화 -->
-                <!-- 
+            <section class="page-content">
+                <!-- 페이지 헤더 -->
                 <div class="text-center mb-4">
-                    ... (생략) ...
+                    <h1 id="page-main-title" class="page-title">공유 목록</h1>
+                    <p class="page-subtitle">동료들이 공유한 기업·매수자·매도자 정보를 확인하세요.</p>
                 </div>
-                -->
 
-                <!-- 서비스 준비 중 안내 섹션 -->
-                <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 500px;">
-                    <div style="background: #ffffff; padding: 60px 40px; border-radius: 32px; box-shadow: 0 20px 50px rgba(30, 58, 138, 0.05); border: 1.5px solid #f1f5f9; text-align: center; max-width: 500px; width: 100%; animation: fadeInUp 0.6s ease-out;">
-                        <div style="width: 80px; height: 80px; background: #f1f5f9; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px;">
-                            <span class="material-symbols-outlined" style="font-size: 40px; color: #1e293b;">construction</span>
+                <!-- 검색바 -->
+                <div class="search-and-actions">
+                    <div class="search-centered-wrap">
+                        <div class="input-wrapper">
+                            <input type="text" id="search-input" placeholder="이름, 메모, 산업 키워드로 검색해주세요">
+                            <button id="search-btn">
+                                <span class="material-symbols-outlined">search</span>
+                            </button>
                         </div>
-                        <h2 style="font-size: 28px; font-weight: 800; color: #1e293b; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">서비스 준비 중입니다</h2>
-                        <p style="font-size: 16px; color: #64748b; line-height: 1.6; margin-bottom: 32px;">
-                            공유목록 기능은 현재 서비스 고도화를 위해 잠시 준비 중입니다.<br>
-                            더 나은 기능으로 곧 찾아뵙겠습니다.
-                        </p>
-                        <button onclick="location.href='./index.html'" style="padding: 14px 40px; background: #1e293b; color: #ffffff; border: none; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);">
-                            대시보드로 돌아가기
-                        </button>
                     </div>
                 </div>
 
-                <style>
-                    @keyframes fadeInUp {
-                        from { opacity: 0; transform: translateY(20px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                </style>
-                
-                <!-- 기존 콘텐츠 주석 처리 계속 -->
-                <div style="display: none;">
-                <!-- 
-                    (공유목록 로직 및 UI 요소들...)
-                -->
+                <!-- 테이블 헤더: 타이틀 & 필터 & 정렬 -->
+                <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                    <div class="list-section-title">공유 목록</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- 읽기 여부 토글 -->
+                        <button id="filter-tab-unread" class="unread-toggle-btn">
+                            <span class="material-symbols-outlined">notifications_paused</span>
+                            읽지 않음
+                        </button>
+                        <!-- 정렬 드롭다운 -->
+                        <div class="dropdown">
+                            <button
+                                class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center justify-content-between p-2 sort-dropdown-btn"
+                                type="button" id="sort-dropdown-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="material-symbols-outlined">sort</span>
+                                    <span id="current-sort-label">최근 등록순</span>
+                                </div>
+                                <span class="material-symbols-outlined">expand_more</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 mt-2"
+                                aria-labelledby="sort-dropdown-btn"
+                                style="border-radius: 12px; font-size: 13px; min-width: 160px;">
+                                <li><a class="dropdown-item rounded-3 py-2 sort-option active" href="#" data-sort="newest">최근 등록순</a></li>
+                                <li><a class="dropdown-item rounded-3 py-2 sort-option" href="#" data-sort="oldest">오래된 등록순</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- 리스트 컨테이너 -->
+                <div id="list-container" class="list-table-wrap">
+                    <div class="table-responsive">
+                        <table class="table table-hover m-0" style="vertical-align: middle; width: 100%;">
+                            <colgroup>
+                                <col style="width: 170px;">  <!-- 기업명 -->
+                                <col style="width: 150px;">  <!-- 산업 -->
+                                <col style="width: 70px;">   <!-- 구분 -->
+                                <col style="width: 70px;">   <!-- 공개여부 -->
+                                <col style="width: 160px;">  <!-- 메모 및 내용 -->
+                                <col style="width: 160px;">  <!-- 발신자 -->
+                                <col style="width: 120px;">  <!-- 공유일 -->
+                                <col style="width: 120px;">  <!-- 수신 확인 -->
+                                <col style="width: 60px;">   <!-- 삭제 -->
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="list-th">기업명</th>
+                                    <th class="list-th">산업</th>
+                                    <th class="list-th">구분</th>
+                                    <th class="list-th">공개여부</th>
+                                    <th class="list-th">메모 및 내용</th>
+                                    <th class="list-th">발신자</th>
+                                    <th class="list-th list-th-c">공유일</th>
+                                    <th class="list-th list-th-c">수신 확인</th>
+                                    <th class="list-th" style="text-align: center;">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shared-items-list">
+                                <!-- JS에서 데이터 주입 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 빈 상태 -->
+                    <div id="empty-state" class="dc-empty-state">
+                        <div class="dc-empty-icon">
+                            <span class="material-symbols-outlined">folder_open</span>
+                        </div>
+                        <h3 id="empty-title" style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">항목이 없습니다</h3>
+                        <p id="empty-desc" style="color: #94a3b8; font-size: 14px; margin: 0;">조건에 맞는 공유 내역이 없습니다.</p>
+                    </div>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div id="pagination-container" class="d-flex justify-content-center mt-5" style="gap: 8px;"></div>
             </section>
+
             <footer id="global-footer"></footer>
         </main>
     </div>
 
-    <!-- Item Summary Modal (Replaces old NDA modal) -->
-    <div id="item-summary-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
-        <div style="background:white; width:95%; max-width:500px; border-radius:24px; padding:0; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; animation: modalFadeIn 0.3s ease-out;">
-            <!-- Modal Header -->
-            <div style="background:var(--navy); padding:24px 32px; color:white;">
-                <h3 style="margin:0; font-size:20px; font-weight:700; letter-spacing:-0.5px;">공유 항목 요약</h3>
-            </div>
-            
-            <!-- Modal Body -->
-            <div style="padding:32px; display:flex; flex-direction:column; gap:20px;">
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">항목명</label>
-                    <div id="summary-item-name" style="font-size:18px; font-weight:700; color:#1e293b;"></div>
-                </div>
+    <!-- ───────────────────────────────────────────
+         공유 항목 요약 모달
+    ─────────────────────────────────────────── -->
+    <div id="item-summary-modal" class="summary-modal-backdrop">
+        <div class="summary-modal-dialog">
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">공개여부</label>
-                        <div id="summary-visibility" style="font-size:15px; font-weight:700; color:#1e293b;"></div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">유형</label>
-                        <div id="summary-type" style="font-size:15px; font-weight:600; color:#1e293b;"></div>
-                    </div>
+            <!-- 헤더 -->
+            <div class="summary-modal-header">
+                <div id="summary-header-icon" class="summary-header-icon">
+                    <span id="summary-header-icon-symbol" class="material-symbols-outlined">folder_shared</span>
                 </div>
-
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">메모</label>
-                    <div id="summary-memo" style="font-size:14px; line-height:1.6; color:#475569; background:#f8fafc; padding:12px; border-radius:12px; border:1px solid #e2e8f0; min-height:60px; white-space:pre-wrap;"></div>
-                </div>
-
-                <!-- Attached Files Area (Added) -->
-                <div id="summary-files-area" style="display:none; flex-direction:column; gap:8px;">
-                    <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">첨부 파일</label>
-                    <div id="summary-files-list" style="display:flex; flex-direction:column; gap:5px; background: #fff9f0; padding:12px; border-radius:12px; border:1px solid #ffedd5;"></div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; padding-top:10px; border-top:1px solid #f1f5f9;">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">발신자</label>
-                        <div id="summary-sender" style="font-size:14px; font-weight:600; color:#1e293b;"></div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <label style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">공유일</label>
-                        <div id="summary-date" style="font-size:14px; color:#64748b;"></div>
-                    </div>
+                <div id="summary-item-name" class="summary-header-name"></div>
+                <div class="summary-header-badges">
+                    <span id="summary-type-badge" class="summary-badge-pill"></span>
+                    <span id="summary-visibility-badge" class="summary-badge-pill"></span>
                 </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div style="padding:24px 32px; background:#f8fafc; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid #f1f5f9;">
-                <button id="btn-close-summary" style="padding:10px 20px; border-radius:12px; border:1px solid #e2e8f0; background:white; color:#64748b; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s;">돌아가기</button>
-                <button id="btn-go-detail" style="padding:10px 24px; border-radius:12px; border:none; background:var(--navy); color:white; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 12px rgba(30,58,138,0.25);">열람하기</button>
+            <!-- 바디 -->
+            <div class="summary-modal-body">
+
+                <!-- 메모 -->
+                <div class="summary-section">
+                    <div class="summary-label">메모</div>
+                    <div id="summary-memo" class="summary-content-box"></div>
+                </div>
+
+                <!-- 첨부 파일 -->
+                <div id="summary-files-area" class="summary-section">
+                    <div class="summary-label">첨부 파일</div>
+                    <div id="summary-nda-notice" style="display: none;">
+                        <div class="nda-lock-notice">
+                            <span class="material-symbols-outlined">lock</span>
+                            파일을 열람하려면 상세 페이지에서 NDA 체결이 필요합니다.
+                        </div>
+                    </div>
+                    <div id="summary-files-list" class="summary-files-box"></div>
+                </div>
+
+                <!-- 발신자 & 공유일 (카드 형태) -->
+                <div class="summary-sender-card">
+                    <img id="summary-sender-avatar" src="" alt="Avatar" class="summary-sender-avatar">
+                    <div class="summary-sender-info">
+                        <div id="summary-sender-name" class="sender-name"></div>
+                        <div id="summary-sender-meta" class="sender-meta"></div>
+                    </div>
+                    <div class="shared-date">
+                        <div class="date-label">공유일</div>
+                        <div id="summary-date" class="date-value"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 하단 버튼 -->
+            <div class="summary-modal-footer">
+                <button id="btn-close-summary" type="button" class="btn-summary btn-summary-close">
+                    돌아가기
+                </button>
+                <button id="btn-go-detail" type="button" class="btn-summary btn-summary-action">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">open_in_new</span>
+                    열람하기
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- NDA Modal -->
-    <div class="modal fade" id="nda-modal" tabindex="-1" aria-labelledby="ndaModalLabel" aria-hidden="true"
-        style="z-index: 1060;">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0"
-                style="border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;">
-                <div class="modal-header border-0 pb-0 pt-4 px-4 bg-white d-flex align-items-center justify-content-between">
-                    <h5 class="modal-title fw-bold" id="ndaModalLabel"
-                        style="font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
-                        <span class="material-symbols-outlined"
-                            style="color: #8b5cf6; font-size: 28px;">verified_user</span>
-                        비밀유지확약서 (NDA)
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4 bg-white">
-                    <div class="nda-content-box p-4 mb-4"
-                        style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; font-size: 13.5px; color: #475569; line-height: 1.8; max-height: 280px; overflow-y: auto;">
-                        <p class="mb-3 fw-bold"
-                            style="color: #1e293b; font-size: 15px; border-bottom: 2px solid #ede9fe; padding-bottom: 8px;">
-                            [정보 제공에 관한 비밀유지 의무]</p>
-                        본인은 'DealChat' 서비스를 통해 제공받는 매도 기업의 모든 정보(재무 현황, 영업 기밀, 거래 조건 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을
-                        확약합니다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적
-                        이외의 용도로 사용하지 아니한다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게
-                        누설하거나 공개하지 아니한다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가
-                        발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
-                        위의 내용을 충분히 숙지하였으며, 신의성실의 원칙에 따라 동의합니다.
-                    </div>
-
-                    <div class="signature-section" style="padding: 10px 5px;">
-                        <div class="mb-4">
-                            <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">서명 (성함 입력)</label>
-                            <div class="input-group">
-                                <input type="text" id="nda-signature-name" class="form-control" placeholder="성함을 정자로 입력해주세요" 
-                                    style="border-radius: 12px; font-size: 15px; padding: 14px 18px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s;">
-                            </div>
-                            <p id="nda-name-hint" class="small mt-2 mb-0" style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
-                                * 현재 로그인 중인 <strong style="color: #8b5cf6;"><span id="logged-in-user-name"></span></strong> 님의 성함을 입력해주세요.
-                            </p>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label fw-bold mb-2" style="font-size: 15px; color: #1e293b;">동의 문구 확인</label>
-                            <p class="mb-3" style="color: #8b5cf6; font-size: 16px; background: #f5f3ff; padding: 16px; border-radius: 12px; border: 1px dashed #8b5cf6; text-align: center;">
-                                <strong style="font-size: 18px; display: block; margin-bottom: 4px;">위 사항을 위반하지 않을 것을 약속합니다</strong>
-                                <span style="font-size: 13px; color: #64748b; font-weight: 500;">* 위 문구를 아래 박스에 똑같이 입력해주세요.</span>
-                            </p>
-                            <div class="input-group">
-                                <input type="text" id="nda-confirmation-text" class="form-control" placeholder="문구를 입력하세요" 
-                                    style="border-radius: 12px; font-size: 16px; padding: 14px 20px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s; text-align: center; font-weight: 600;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
-                    <button type="button" class="btn px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal"
-                        style="background: #f1f5f9; color: #64748b; font-size: 15px; flex: 1; height: 50px;">취소</button>
-                    <button type="button" id="btn-confirm-nda" class="btn btn-primary px-4 py-2 rounded-pill fw-bold" disabled
-                        style="background: #8b5cf6; border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의
-                        및 페이지 이동</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/front-config.js"></script>
     <script src="../js/header_loader.js"></script>
     <script src="../js/footer_loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/shared_items.js?v=20260324_04" type="module"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const obs = new MutationObserver(() => {
-                const hasRows = document.querySelector('.shared-list-row');
-                document.getElementById('list-header-row').style.display = hasRows ? 'flex' : 'none';
-                document.getElementById('shared-items-list').style.borderRadius = hasRows ? '0 0 16px 16px' : '16px';
-            });
-            obs.observe(document.getElementById('shared-items-list'), { childList: true });
-        });
-    </script>
+    <script src="../js/shared_items.js?v=20260329_02" type="module"></script>
 </body>
 
 </html>

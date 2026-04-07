@@ -15,135 +15,16 @@
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        /* 레이아웃 붕괴 방지를 위한 글로벌 설정 */
-
-        /* chip 버튼 — 진행 현황 선택 */
-        .modal-content-report {
-            margin: 0 !important;
-            max-height: 90vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Report Cards */
-        .report-card {
-            background: #ffffff;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .report-card:hover {
-            border-color: #8b5cf6;
-            background-color: #f5f3ff;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.08);
-        }
-
-        .report-card.primary {
-            border-color: #8b5cf6;
-            background-color: #f5f3ff;
-        }
-
-        .report-card.primary:hover {
-            background-color: #ede9fe;
-        }
-
-        .report-card h5 {
-            margin: 0;
-            font-size: 15px;
-            font-weight: 700;
-            color: #1e293b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .report-card p {
-            margin: 0;
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.5;
-        }
-
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .btn-status-chip {
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid #e2e8f0;
-            background: #fff;
-            font-size: 13px;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .btn-status-chip.active {
-            background: #8b5cf6;
-            border-color: #8b5cf6;
-            color: #fff;
-            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.25);
-        }
-
-        /* sidebar는 보라색 primary 테마 */
-        .sidebar .panel-header {
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        #btn-save-seller {
-            background: #8b5cf6 !important;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
-        }
-
-        /* notebook-title placeholder 스타일 */
-        [contenteditable="true"]:empty::before {
-            content: attr(placeholder);
-            color: #94a3b8;
-            pointer-events: none;
-        }
-
-        /* 레이아웃 비율 조정 50:25:25 */
-        .sidebar { flex: 2 !important; width: auto !important; min-width: 400px; border-right: 1px solid var(--border-color); }
-        .main-content { flex: 1 !important; min-width: 300px; }
-        .right-panel { flex: 1 !important; width: auto !important; min-width: 320px; border-left: 1px solid var(--border-color); }
-    </style>
 </head>
 
-<body style="overflow: hidden; height: 100vh;">
+<body class="theme-mode-sellers is-loading">
     <!-- Global Loading Overlay -->
     <div id="global-loader">
         <div class="loader-logo">DealChat</div>
         <div class="loader-text">데이터를 불러오는 중입니다...</div>
     </div>
 
-    <div class="app-container" style="display: flex; height: 100vh; overflow: hidden; background: #ffffff;">
+    <div class="app-container">
 
         <!-- ============================================================
              좌 패널 (Sidebar) — 매도자 정보 입력폼
@@ -158,7 +39,8 @@
                 </button>
                 <h2 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;
                            display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 20px; color: #8b5cf6;">storefront</span>
+                    <span class="material-symbols-outlined"
+                        style="font-size: 20px; color: var(--page-theme-color);">storefront</span>
                     <span id="sidebar-header-title">매도자 정보</span>
                 </h2>
             </div>
@@ -172,16 +54,20 @@
                     <button id="ai-auto-fill-btn"
                         style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <span class="material-symbols-outlined"
-                            style="font-size: 20px; color: #6366f1;">auto_awesome</span>
+                            style="font-size: 20px; color: var(--page-theme-color);">auto_awesome</span>
                         <span style="font-size: 14px; font-weight: 600; color: #475569;">분석된 파일로 AI가 자동 입력하기</span>
                     </button>
                     <p style="margin: 4px 0 0 4px; font-size: 11px; color: #94a3b8;">* 업로드된 파일 내용을 바탕으로 기본 정보를 추출합니다.
                     </p>
                 </div>
 
+
+
                 <!-- 진행 현황 (상단 배치) -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">account_tree</span>
                         진행 현황<span style="color: #ef4444; margin-left: 2px;">*</span>
                     </p>
                     <div id="status-chip-group" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: #f8fafc;
@@ -202,7 +88,9 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">business</span>
                                 기업명(매도자)<span style="color: #ef4444; margin-left: 2px;">*</span>
                             </p>
                         </div>
@@ -212,17 +100,19 @@
                             <span class="notebook-title" id="seller-name-editor" contenteditable="true"
                                 style="font-size: 14px; font-weight: 700; color: #1e293b; width: 100%; outline: none;"
                                 placeholder="매도자명"></span>
-                             <!-- 기업명 제안 드롭다운 -->
-                             <div id="company-suggestions"
-                                 style="display: none; position: absolute; top: 48px; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 10000; overflow-y: auto; max-height: 250px;">
-                             </div>
+                            <!-- 기업명 제안 드롭다운 -->
+                            <div id="company-suggestions"
+                                style="display: none; position: absolute; top: 48px; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 10000; overflow-y: auto; max-height: 250px;">
+                            </div>
                         </div>
                     </div>
                     <!-- 산업 -->
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">category</span>
                                 산업<span style="color: #ef4444; margin-left: 2px;">*</span>
                             </p>
                         </div>
@@ -253,7 +143,9 @@
                             <option value="플랫폼·커뮤니티">플랫폼·커뮤니티</option>
                             <option value="기타">기타</option>
                         </select>
-                        <input type="text" id="seller-industry-etc" style="width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px; display: none;" placeholder="산업 직접 입력">
+                        <input type="text" id="seller-industry-etc"
+                            style="width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px; display: none;"
+                            placeholder="산업 직접 입력">
                     </div>
                 </div>
 
@@ -261,17 +153,38 @@
                 <div style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
                     <!-- 대표자명 -->
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                            대표자명</p>
-                        <input type="text" id="seller-ceo" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">person</span>
+                                대표자명
+                            </p>
+                            <label
+                                style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #64748b;">
+                                <input type="checkbox" id="blind-check-ceo" class="blind-check" data-field="ceo"
+                                    style="width: 14px; height: 14px; cursor: pointer;">
+                                blind
+                            </label>
+                        </div>
+                        <input type="text" id="seller-ceo" class="personal-info-field" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
                                    color: #1e293b; height: 42px;" placeholder="성명">
                     </div>
-                    <!-- 이메일 -->
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                            이메일</p>
-                        <input type="email" id="seller-email" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">mail</span>
+                                이메일
+                            </p>
+                            <label
+                                style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #64748b;">
+                                <input type="checkbox" id="blind-check-email" class="blind-check" data-field="email"
+                                    style="width: 14px; height: 14px; cursor: pointer;">
+                                blind
+                            </label>
+                        </div>
+                        <input type="email" id="seller-email" class="personal-info-field" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
                                    color: #1e293b; height: 42px;" placeholder="example@email.com">
                     </div>
@@ -279,21 +192,41 @@
 
                 <!-- 필드: 설립일자 & 주소 -->
                 <div style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
-                    <!-- 설립일자 -->
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                            설립일자</p>
-                        <input type="text" id="seller-establishment" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">calendar_month</span>
+                                설립일자
+                            </p>
+                            <label
+                                style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #64748b;">
+                                <input type="checkbox" id="blind-check-establishment" class="blind-check" data-field="establishment"
+                                    style="width: 14px; height: 14px; cursor: pointer;">
+                                blind
+                            </label>
+                        </div>
+                        <input type="text" id="seller-establishment" class="format-date personal-info-field" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
                                    color: #1e293b; height: 42px;" placeholder="YYYY-MM-DD">
                     </div>
-                    <!-- 주소 -->
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                            주소</p>
-                        <input type="text" id="seller-address" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">location_on</span>
+                                주소
+                            </p>
+                            <label
+                                style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #64748b;">
+                                <input type="checkbox" id="blind-check-address" class="blind-check" data-field="address"
+                                    style="width: 14px; height: 14px; cursor: pointer;">
+                                blind
+                            </label>
+                        </div>
+                        <input type="text" id="seller-address" class="personal-info-field" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
-                                   color: #1e293b; height: 42px;" placeholder="회사 주소">
+                                   color: #1e293b; height: 42px;" placeholder="회사 소재지">
                     </div>
                 </div>
 
@@ -303,8 +236,10 @@
                     <div style="flex: 1;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                                매칭 희망가 (원)
+                            <p
+                                style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">sell</span>
+                                매칭 희망가 (억)
                             </p>
                             <label
                                 style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #64748b;">
@@ -313,14 +248,17 @@
                                 협의
                             </label>
                         </div>
-                        <input type="text" id="seller-price" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+                        <input type="text" id="seller-price" class="format-number" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
                                    color: #1e293b; height: 42px;" placeholder="예: 100 (숫자만) 또는 협의">
                     </div>
                     <!-- 매도 방식 -->
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
-                            매도 방식</p>
+                        <p
+                            style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">handshake</span>
+                            매도 방식
+                        </p>
                         <input type="text" id="seller-method" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
                                    font-family: inherit; font-size: 14px; outline: none; background: #ffffff;
                                    color: #1e293b; height: 42px;" placeholder="예: 경영권 매각, 지분 매각 등">
@@ -329,7 +267,9 @@
 
                 <!-- 회사 소개 -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
                         회사 소개<span style="color: #ef4444; margin-left: 2px;">*</span>
                     </p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -340,33 +280,37 @@
                     </div>
                 </div>
 
-                <!-- 재무 정보 (동적 테이블) -->
-                <div id="financial-section" style="margin-bottom: 24px; width: 100%;">
-                    <p style="margin: 0 0 12px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">재무
-                        정보</p>
+                <!-- 주요 제품/서비스 -->
+                <div style="margin-bottom: 24px;">
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">inventory_2</span>
+                        주요 제품/서비스
+                    </p>
+                    <textarea id="seller-key-products" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color);
+                               border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6;
+                               resize: none; background: #ffffff; color: #334155; overflow: hidden;"
+                        placeholder="매칭 기업의 주요 제품이나 서비스 내용을 입력하세요..."></textarea>
+                </div>
+
+                <!-- 재무현황 동적 폼 -->
+                <div style="margin-bottom: 24px; width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 20px;" id="financial-section">
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">analytics</span>
+                        재무 정보
+                    </p>
 
                     <!-- Header Row -->
-                    <div
-                        style="display: flex; gap: 8px; padding: 8px 30px 8px 12px; margin-bottom: 8px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; width: 100%;">
-                        <div
-                            style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">
-                            년도</div>
-                        <div
-                            style="flex: 1.5; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">
-                            매출액(원)</div>
-                        <div
-                            style="flex: 1.5; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">
-                            영업이익(원)</div>
-                        <div
-                            style="flex: 1.5; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">
-                            당기순익(원)</div>
-                        <div
-                            style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">
-                            EV/EBITDA</div>
+                    <div style="display: flex; gap: 8px; padding: 8px 30px 8px 12px; margin-bottom: 8px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; width: 100%;">
+                        <div style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">년도</div>
+                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">매출액(원)</div>
+                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">영업이익(원)</div>
+                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">당기순익(원)</div>
+                        <div style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">EV/EBITDA</div>
                     </div>
 
                     <!-- Rows Container -->
-                    <div id="financial-rows" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div id="financial-rows" style="display: flex; flex-direction: column; gap: 0; min-height: 2px;">
                         <!-- 동적 재무현황 행이 추가될 컨테이너 -->
                     </div>
 
@@ -380,7 +324,10 @@
 
                 <!-- 재무 분석 -->
                 <div style="margin-bottom: 24px; width: 100%;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">재무 분석
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">query_stats</span>
+                        재무 분석
                     </p>
                     <textarea id="seller-fin-analysis" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color);
                                border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6;
@@ -390,7 +337,10 @@
 
                 <!-- 매도 정보 -->
                 <div style="margin-bottom: 24px; width: 100%;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">매도 정보
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">info</span>
+                        매도 정보
                     </p>
                     <textarea id="seller-memo" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color);
                                border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6;
@@ -400,29 +350,73 @@
 
                 <!-- 담당자 의견 -->
                 <div style="margin-bottom: 24px; width: 100%;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">담당자 의견
+                    <p
+                        style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">chat_bubble</span>
+                        담당자 의견
                     </p>
                     <textarea id="seller-manager-memo" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color);
                                border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6;
                                resize: none; background: #ffffff; color: #334155; overflow: hidden;"
                         placeholder="매도자에 대한 개인적인 의견이나 추가 참고사항을 입력하세요..."></textarea>
+                </div>
 
-                    <!-- 작성자 정보 -->
+                <!-- 비공개 메모 추가 (Purple) -->
+                <div class="private-memo-section"
+                    style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+                    <p
+                        style="margin: 0; font-weight: 600; font-size: 13px; color: var(--page-theme-color); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                        비공개 메모 (작성자만 확인 가능)
+                    </p>
+                    <textarea id="private-memo"
+                        style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid var(--page-theme-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: var(--page-theme-color); overflow: hidden;"
+                        placeholder="나만 볼 수 있는 비공개 메모를 입력하세요..."></textarea>
+                </div>
+
+                <!-- 키워드 블라인드 추가 -->
+                <div id="blind-config-section" style="margin-bottom: 24px;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <p
+                            style="margin: 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined"
+                                style="font-size: 18px; color: #f59e0b;">visibility_off</span>
+                            키워드 블라인드
+                        </p>
+                    </div>
+                    <div id="blind-keywords-container"
+                        style="padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px;">
+                        <p style="margin: 0 0 8px 0; font-size: 11px; color: #b45309; line-height: 1.4;">* 아래에 입력한 단어들은
+                            리포트 모드에서 "○○○"로 자동 가려집니다. (콤마 또는 엔터로 구분)</p>
+                        <div id="blind-tag-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+                            <!-- 해시태그들이 여기에 추가됩니다 -->
+                        </div>
+                        <input type="text" id="blind-tag-input"
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #fde68a; border-radius: 6px; font-size: 13px; outline: none;"
+                            placeholder="가릴 단어를 입력하세요...">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px; width: 100%;">
+                    <!-- 작성자 정보 (기본적으로 숨김, 리포트 모드에서만 표시) -->
                     <div id="memo-author-info"
-                        style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px;">
+                        style="display: none; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px;">
                         <div id="memo-update-date"
                             style="font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 10px; padding-left: 4px;">
                         </div>
                         <div id="memo-author-info-box"
                             style="display: flex; align-items: center; gap: 12px; background: #ffffff; padding: 4px 16px 4px 6px; border-radius: 40px; border: 1.5px solid #e2e8f0; margin-top: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                            <img id="memo-author-avatar" src="../img/avatars/default-avatar.png"
-                                alt="Avatar"
+                            <img id="memo-author-avatar" src="../img/avatars/default-avatar.png" alt="Avatar"
                                 style="width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; border: 1px solid #e2e8f0; flex-shrink: 0;">
-                            <div style="display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;">
-                                <div style="display: flex; align-items: center; font-size: 13px; line-height: 1.4; white-space: nowrap;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;">
+                                <div
+                                    style="display: flex; align-items: center; font-size: 13px; line-height: 1.4; white-space: nowrap;">
                                     <span id="memo-author-company" style="color: #64748b; font-weight: 500;">-</span>
                                     <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
-                                    <span id="memo-author-affiliation" style="color: #64748b; font-weight: 500;">-</span>
+                                    <span id="memo-author-affiliation"
+                                        style="color: #64748b; font-weight: 500;">-</span>
                                     <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
                                     <span id="memo-author-name" style="font-weight: 700; color: #1e293b;">-</span>
                                     <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
@@ -449,8 +443,7 @@
                     비공개
                 </button>
                 <button id="btn-save-seller" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-                           padding: 10px; border-radius: 8px; font-size: 13px; border: none;
-                           background: #8b5cf6; color: white; white-space: nowrap;">
+                           padding: 10px; border-radius: 8px; font-size: 13px; border: none; white-space: nowrap;">
                     <span class="material-symbols-outlined" style="font-size: 16px;">save</span>
                     저장하기
                 </button>
@@ -499,14 +492,26 @@
             </section>
 
             <footer class="input-area"
-                style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #ffffff;">
+                style="padding: 12px 20px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; flex-direction: column; align-items: flex-start;">
+                <!-- AI 모델 선택기 이동 (입력창 위로) -->
+                <div class="model-selector-container" style="margin-bottom: 8px;">
+                    <button id="btn-model-selector" class="btn-model-selector" title="AI 모델 선택">
+                        <span class="material-symbols-outlined"
+                            style="font-size: 18px; color: #6366f1;">deployed_code</span>
+                        <span id="current-model-name" style="font-size: 13px;">연결 중...</span>
+                        <span class="material-symbols-outlined" style="font-size: 16px;">expand_less</span>
+                    </button>
+                    <div id="model-dropdown" class="model-dropdown">
+                        <!-- 모델 옵션들이 JS를 통해 동적으로 생성됩니다 -->
+                    </div>
+                </div>
                 <div class="input-wrapper" style="max-width: 100%; background: #ffffff; border: 1px solid #e2e8f0;
                            box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-radius: 20px;">
                     <textarea id="chat-input" placeholder="업로드된 소스에 대해 질문해보세요..." rows="1" style="background: transparent; color: #334155; font-size: 15px; margin: 0;
-                                padding-top: 12px; padding-bottom: 12px;"></textarea>
+                                padding-top: 8px; padding-bottom: 8px;"></textarea>
                     <div class="input-tools-right">
                         <button class="btn-send" id="send-btn">
-                            <span class="material-symbols-outlined" style="color: #8b5cf6;">send</span>
+                            <span class="material-symbols-outlined" style="color: var(--page-theme-color);">send</span>
                         </button>
                     </div>
                 </div>
@@ -529,49 +534,28 @@
             <div class="panel-content"
                 style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 20px;">
 
-                <!-- 학습 데이터 -->
+                <!-- 학습데이터(기업 연동) -->
                 <div class="data-section">
                     <div style="display: flex; justify-content: space-between; align-items: center;
                                 margin-bottom: 12px; padding: 0 4px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습 데이터</h3>
-                        <button class="btn-new-source" id="add-source-training"
-                            style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-                            <span>추가</span>
-                        </button>
+                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습데이터(기업 연동)
+                        </h3>
+                        <!-- 기업 연동 데이터는 추가 버튼 없음 -->
                     </div>
                     <div class="file-list-card" style="background: white; border: 1px solid var(--border-color); border-radius: 12px;
                                 min-height: 100px; max-height: 200px; overflow-y: auto; margin-bottom: 8px;">
                         <ul class="source-list" id="source-list-training"
                             style="margin: 0; padding: 0; list-style: none;"></ul>
                     </div>
-
-                    <!-- 학습데이터-재무제표 -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;
-                                margin-bottom: 12px; padding: 0 4px; margin-top: 16px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습데이터-재무제표
-                        </h3>
-                        <button class="btn-new-source" id="add-source-finance"
-                            style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-                            <span>추가</span>
-                        </button>
-                    </div>
-                    <div class="file-list-card" style="background: white; border: 1px solid var(--border-color); border-radius: 12px;
-                                min-height: 100px; max-height: 200px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-finance"
-                            style="margin: 0; padding: 0; list-style: none;"></ul>
-                    </div>
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; padding: 0 4px;">
-                        * AI 프롬프트 및 분석에 반영되는 데이터입니다.</p>
                 </div>
 
-                <!-- 비학습 데이터 -->
+                <!-- 학습데이터(추가 학습) -->
                 <div class="data-section">
                     <div style="display: flex; justify-content: space-between; align-items: center;
                                 margin-bottom: 12px; padding: 0 4px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">비학습 데이터</h3>
-                        <button class="btn-new-source" id="add-source-non-training"
+                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습데이터(추가 학습)
+                        </h3>
+                        <button class="btn-new-source" id="add-source-additional"
                             style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
                             <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
                             <span>추가</span>
@@ -579,106 +563,19 @@
                     </div>
                     <div class="file-list-card" style="background: white; border: 1px solid var(--border-color); border-radius: 12px;
                                 min-height: 100px; max-height: 300px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-non-training"
+                        <ul class="source-list" id="source-list-additional"
                             style="margin: 0; padding: 0; list-style: none;"></ul>
                     </div>
                     <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; padding: 0 4px;">
-                        * AI 분석에 포함되지 않는 단순 참고용 데이터입니다.</p>
+                        * AI 분석에 반영될 수 있는 추가 학습 데이터입니다.</p>
                 </div>
 
                 <input type="file" id="file-upload" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
-            </div>
 
-            <div class="panel-footer" style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #ffffff;
-                       display: flex; flex-direction: column; gap: 12px; margin-top: auto;">
-                <button class="btn w-100 d-flex align-items-center justify-content-center gap-2" type="button"
-                    id="btn-generate-report" style="border-radius: 8px; padding: 10px; background: #8b5cf6;
-                           color: white; border: none; font-size: 14px; box-shadow: 0 4px 12px rgba(139,92,246,0.15);">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">article</span>
-                    <span style="font-weight: 600;">보고서 생성</span>
-                </button>
+
             </div>
         </aside>
     </div> <!-- app-container 닫기 -->
-
-    <!-- Report Selection Modal -->
-    <div id="report-selection-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content-report"
-            style="width: 700px; max-height: 90vh; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;">
-            <div class="report-modal-header"
-                style="background: #8b5cf6; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
-                <h3
-                    style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                    <span class="material-symbols-outlined">auto_awesome_motion</span> 보고서 생성
-                </h3>
-                <button class="btn-close-dark" id="close-report-modal"
-                    style="background: none; border: none; cursor: pointer; color: white;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="report-modal-body" style="padding: 24px; overflow-y: auto; background: #f8fafc;">
-                <h5 style="font-size: 15px; font-weight: 700; color: #334155; margin-bottom: 16px;">형식 선택</h5>
-                <div id="report-grid-format"
-                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px;">
-                    <!-- Report format cards -->
-                </div>
-
-                <h5 style="font-size: 15px; font-weight: 700; color: #334155; margin-bottom: 16px;">추천 리포트</h5>
-                <div id="report-grid-recommended"
-                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    <!-- Recommended report cards -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Generation Detail Modal -->
-    <div class="modal-overlay" id="report-gen-detail-modal" style="display: none;">
-        <div class="modal-content-report"
-            style="width: 600px; max-height: 90vh; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;">
-            <div class="report-modal-header"
-                style="background: #8b5cf6; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button id="back-to-selection"
-                        style="background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center;">
-                        <span class="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <h3 id="selected-report-title"
-                        style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700;">투자 검토 보고서</h3>
-                </div>
-                <button class="btn-close-dark" id="close-gen-detail-modal"
-                    style="background: none; border: none; cursor: pointer; color: white;">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="report-modal-body"
-                style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: #ffffff;">
-                <p id="selected-report-desc" style="font-size: 14px; color: #64748b; line-height: 1.6; margin: 0;">투자
-                    관점에서의 기회를 분석합니다.</p>
-
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <label style="font-size: 14px; font-weight: 700; color: #334155;">리포트 작성 지시사항 (수정 가능)</label>
-                    <textarea id="report-instruction"
-                        style="width: 100%; height: 200px; padding: 15px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; resize: none; outline: none; transition: border-color 0.2s;"
-                        placeholder="보고서에 포함하고 싶은 특별한 요청이 있다면 적어주세요..."></textarea>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <label style="font-size: 14px; font-weight: 700; color: #334155;">언어 설정</label>
-                    <select id="report-language"
-                        style="flex: 1; padding: 10px 15px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; color: #1e293b; outline: none;">
-                        <option value="Korean" selected>한국어 (국문)</option>
-                        <option value="English">영어 (영문)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="report-modal-footer"
-                style="padding: 20px 24px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px; background: #fff;">
-                <button class="btn btn-primary" id="start-generate-report"
-                    style="flex: 1; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 15px; background: #8b5cf6; border: none; color: white;">생성하기</button>
-            </div>
-        </div>
-    </div>
 
     <!-- NDA Modal -->
     <div class="modal fade" id="nda-modal" tabindex="-1" aria-labelledby="ndaModalLabel" aria-hidden="true"
@@ -691,7 +588,7 @@
                     <h5 class="modal-title fw-bold" id="ndaModalLabel"
                         style="font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
                         <span class="material-symbols-outlined"
-                            style="color: #8b5cf6; font-size: 28px;">verified_user</span>
+                            style="color: var(--page-theme-color); font-size: 28px;">verified_user</span>
                         비밀유지확약서 (NDA)
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -700,23 +597,28 @@
                     <div class="nda-content-box p-4 mb-4"
                         style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; font-size: 13.5px; color: #475569; line-height: 1.8; max-height: 280px; overflow-y: auto;">
                         <p class="mb-3 fw-bold"
-                            style="color: #1e293b; font-size: 15px; border-bottom: 2px solid #ede9fe; padding-bottom: 8px;">
+                            style="color: #1e293b; font-size: 15px; border-bottom: 2px solid var(--page-theme-light); padding-bottom: 8px;">
                             [정보 제공에 관한 비밀유지 의무]</p>
                         본인은 'DealChat' 서비스를 통해 제공받는 매도 기업의 모든 정보(재무 현황, 영업 기밀, 거래 조건 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을
                         확약합니다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적
+                        <span style="color: var(--page-theme-color); font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은
+                        정보를 본 거래의 검토 목적
                         이외의 용도로 사용하지 아니한다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게
+                        <span style="color: var(--page-theme-color); font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및
+                        거래 진행 사실을 제3자에게
                         누설하거나 공개하지 아니한다.<br><br>
-                        <span style="color: #8b5cf6; font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가
+                        <span style="color: var(--page-theme-color); font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을
+                        위반하여 상대방에게 손해가
                         발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
                         위의 내용을 충분히 숙지하였으며, 신의성실의 원칙에 따라 동의합니다.
                     </div>
 
                     <div id="nda-access-key-section" style="display: none; margin-bottom: 24px;">
-                        <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">접근 키 입력 (최대 3회 접근 가능)</label>
+                        <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">접근 키 입력 (최대 3회
+                            접근 가능)</label>
                         <div class="input-group">
-                            <input type="text" id="nda-access-key" class="form-control" placeholder="6자리 영문/숫자 키를 입력해주세요" 
+                            <input type="text" id="nda-access-key" class="form-control"
+                                placeholder="6자리 영문/숫자 키를 입력해주세요"
                                 style="border-radius: 12px; font-size: 15px; padding: 14px 18px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s; text-transform: uppercase;">
                         </div>
                         <p class="small mt-2 mb-0" style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
@@ -726,24 +628,33 @@
 
                     <div class="signature-section" style="padding: 10px 5px;">
                         <div class="mb-4">
-                            <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">서명 (성함 입력)</label>
+                            <label class="form-label fw-bold mb-2" style="font-size: 14px; color: #1e293b;">서명 (성함
+                                입력)</label>
                             <div class="input-group">
-                                <input type="text" id="nda-signature-name" class="form-control" placeholder="성함을 정자로 입력해주세요" 
+                                <input type="text" id="nda-signature-name" class="form-control"
+                                    placeholder="성함을 정자로 입력해주세요"
                                     style="border-radius: 12px; font-size: 15px; padding: 14px 18px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s;">
                             </div>
-                            <p id="nda-name-hint" class="small mt-2 mb-0" style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
-                                * 현재 로그인 중인 <strong style="color: #8b5cf6;"><span id="logged-in-user-name"></span></strong> 님의 성함을 입력해주세요.
+                            <p id="nda-name-hint" class="small mt-2 mb-0"
+                                style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
+                                * 현재 로그인 중인 <strong style="color: var(--page-theme-color);"><span
+                                        id="logged-in-user-name"></span></strong> 님의 성함을 입력해주세요.
                             </p>
                         </div>
 
                         <div class="mb-2">
-                            <label class="form-label fw-bold mb-2" style="font-size: 15px; color: #1e293b;">동의 문구 확인</label>
-                            <p class="mb-3" style="color: #8b5cf6; font-size: 16px; background: #f5f3ff; padding: 16px; border-radius: 12px; border: 1px dashed #8b5cf6; text-align: center;">
-                                <strong style="font-size: 18px; display: block; margin-bottom: 4px;">위 사항을 위반하지 않을 것을 약속합니다</strong>
-                                <span style="font-size: 13px; color: #64748b; font-weight: 500;">* 위 문구를 아래 박스에 똑같이 입력해주세요.</span>
+                            <label class="form-label fw-bold mb-2" style="font-size: 15px; color: #1e293b;">동의 문구
+                                확인</label>
+                            <p class="mb-3"
+                                style="color: var(--page-theme-color); font-size: 16px; background: var(--page-theme-light); padding: 16px; border-radius: 12px; border: 1px dashed var(--page-theme-color); text-align: center;">
+                                <strong style="font-size: 18px; display: block; margin-bottom: 4px;">위 사항을 위반하지 않을 것을
+                                    약속합니다</strong>
+                                <span style="font-size: 13px; color: #64748b; font-weight: 500;">* 위 문구를 아래 박스에 똑같이
+                                    입력해주세요.</span>
                             </p>
                             <div class="input-group">
-                                <input type="text" id="nda-confirmation-text" class="form-control" placeholder="문구를 입력하세요" 
+                                <input type="text" id="nda-confirmation-text" class="form-control"
+                                    placeholder="문구를 입력하세요"
                                     style="border-radius: 12px; font-size: 16px; padding: 14px 20px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s; text-align: center; font-weight: 600;">
                             </div>
                         </div>
@@ -752,8 +663,9 @@
                 <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
                     <button type="button" id="nda-modal-cancel-btn" class="btn px-4 py-2 rounded-pill fw-bold"
                         style="background: #f1f5f9; color: #64748b; font-size: 15px; flex: 1; height: 50px;">취소</button>
-                    <button type="button" id="btn-confirm-nda" class="btn btn-primary px-4 py-2 rounded-pill fw-bold" disabled
-                        style="background: #8b5cf6; border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의
+                    <button type="button" id="btn-confirm-nda" class="btn btn-primary px-4 py-2 rounded-pill fw-bold"
+                        disabled
+                        style="background: var(--page-theme-color); border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px var(--page-theme-shadow); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의
                         및 리포트 보기</button>
                 </div>
             </div>
@@ -762,10 +674,10 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/front-config.js"></script>
     <script src="../js/dealbook_sellers.js?v=20260310_01" type="module"></script>
 </body>

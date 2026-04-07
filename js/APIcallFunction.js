@@ -6,9 +6,9 @@ export function APIcall(prompts, Furl, Fheaders, Fmethod = 'POST') {
 
     let body;
     let method = Fmethod;
-    let endpoint = Furl || uploadHandlerUrl;
+    let endpoint = Furl;
 
-    // 0. 인증 토큰 확보 (로그인된 사용자가 있다면 JWT 사용)
+    // 1. 헤더 기본 설정
     let authHeader = `Bearer ${anonKey}`;
     try {
         const projectId = supabaseUrl.split('://')[1].split('.')[0];
@@ -27,12 +27,24 @@ export function APIcall(prompts, Furl, Fheaders, Fmethod = 'POST') {
         ...Fheaders
     };
 
-    // 1. AI/Vector Search 관련 요청 라우팅
-    if (prompts && (prompts.action === 'search_vector' || prompts.body)) {
-        endpoint = aiHandlerUrl;
+    // 2. 업로드 요청인 경우 무조건 uploadHandlerUrl 사용
+    if (prompts && prompts.action === 'upload') {
+        endpoint = uploadHandlerUrl;
+        method = 'POST';
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(prompts);
     } 
-    // 2. 일반 CRUD 요청을 직접 Supabase REST API로 변환 (Edge Function 없이 작동하게 함)
-    else if (prompts && prompts.table && prompts.action) {
+    
+    if (!endpoint) endpoint = uploadHandlerUrl;
+
+    // 3. AI/Vector Search 관련 요청 라우팅 (upload가 아닐 때만)
+    if (prompts && prompts.action !== 'upload' && (prompts.action === 'search_vector' || prompts.body)) {
+        endpoint = aiHandlerUrl;
+        body = JSON.stringify(prompts);
+        if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+    } 
+    // 2. 일반 CRUD 요청 (업로드는 이미 위에서 처리했으므로 제외)
+    else if (prompts && prompts.table && prompts.action && prompts.action !== 'upload') {
         endpoint = `${supabaseUrl}/rest/v1/${prompts.table}`;
         
         // 데이터 정제: DB 컬럼이 아닌 제어용 필드(table, action) 제거
@@ -42,7 +54,6 @@ export function APIcall(prompts, Furl, Fheaders, Fmethod = 'POST') {
 
         switch (prompts.action) {
             case 'create':
-            case 'upload':
                 method = 'POST';
                 headers['Prefer'] = 'return=representation';
                 headers['Content-Type'] = 'application/json';
@@ -107,7 +118,8 @@ export function APIcall(prompts, Furl, Fheaders, Fmethod = 'POST') {
             let errMsg = text;
             try { 
                 const errJson = JSON.parse(text);
-                errMsg = errJson.message || errJson.error || text;
+                const errorVal = errJson.message || errJson.error || text;
+                errMsg = (typeof errorVal === 'object') ? JSON.stringify(errorVal) : errorVal;
             } catch(e) {}
             throw new Error(`[DB Error] ${errMsg}`);
         }

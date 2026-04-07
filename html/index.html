@@ -10,121 +10,13 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <style>
-        /* Shared Summary Section Styles */
-        #shared-summary-container {
-            max-width: 1400px;
-            margin: 0 auto 32px;
-            padding: 0 40px;
-        }
-
-        .summary-wrapper {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .summary-card {
-            background: #ffffff;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 20px;
-            padding: 18px 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 320px;
-            height: 94px; /* 서브카피 추가로 인해 높이 소폭 확대 */
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.04);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .summary-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(30, 58, 138, 0.08);
-        }
-
-        /* 건수가 있을 때 호버 (빨간색 솔리드) */
-        .summary-card.has-unread:hover {
-            background-color: #ef4444;
-            border-color: #ef4444;
-        }
-
-        /* 건수가 없을 때 호버 (회색 솔리드) */
-        .summary-card.no-unread:hover {
-            background-color: #94a3b8;
-            border-color: #94a3b8;
-        }
-
-        /* 호버 시 텍스트 및 아이콘 박스 배경 반전 */
-        .summary-card:hover .summary-status,
-        .summary-card:hover .summary-subtext {
-            color: #ffffff !important;
-        }
-
-        .summary-card:hover .summary-icon-box {
-            background-color: #ffffff !important;
-        }
-
-        /* 호버 시 아이콘 색상을 카드 상태색으로 변경 */
-        .summary-card.has-unread:hover .summary-icon-box {
-            color: #ef4444 !important;
-        }
-
-        .summary-card.no-unread:hover .summary-icon-box {
-            color: #94a3b8 !important;
-        }
-
-        .summary-icon-box {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s;
-            background: #f1f5f9;
-            color: #94a3b8;
-        }
-
-        .summary-card.has-unread .summary-icon-box {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-
-        .summary-card.no-unread .summary-icon-box {
-            background: #f1f5f9;
-            color: #94a3b8;
-        }
-
-        .summary-text-box {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .summary-status {
-            font-size: 16px;
-            font-weight: 800;
-            color: #1e293b;
-            white-space: nowrap;
-        }
-
-        .summary-subtext {
-            font-size: 13px;
-            color: #64748b;
-            white-space: nowrap;
-        }
-    </style>
 </head>
 
 <body>
@@ -141,74 +33,49 @@
 
                 <div class="welcome-header">
                     <h1>반갑습니다, <span id="userName2">홍길동</span>님</h1>
-                    <p>탐색할 카테고리를 선택해주세요.</p>
+                    <p>M&A 딜과 기업 정보를 탐색하고, 직접 담당하는 데이터를 관리하세요.</p>
                 </div>
-
-                <!-- 공유 항목 요약 대시보드 (비활성화) -->
-                <!-- 
-                <div id="shared-summary-container" style="display: none;">
-                    <div class="summary-wrapper">
-                        <div class="summary-card received no-unread" id="card-received-summary">
-                            <div class="summary-icon-box">
-                                <span class="material-symbols-outlined">move_to_inbox</span>
-                            </div>
-                            <div class="summary-text-box">
-                                <div class="summary-status">
-                                    <span id="label-received-status">수신 대기 0건</span>
-                                </div>
-                                <div class="summary-subtext" id="label-received-subtext">새로 도착한 정보가 없습니다.</div>
-                            </div>
-                        </div>
-
-                        <div class="summary-card sent no-unread" id="card-sent-summary">
-                            <div class="summary-icon-box">
-                                <span class="material-symbols-outlined">send</span>
-                            </div>
-                            <div class="summary-text-box">
-                                <div class="summary-status">
-                                    <span id="label-sent-status">발신 대기 0건</span>
-                                </div>
-                                <div class="summary-subtext" id="label-sent-subtext">모든 정보가 상대방에게 전달되었습니다.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                -->
 
                 <div class="card-grid">
                     <!-- Column 1: 기업정보 관련 -->
-                    <div class="menu-card primary-card group-startup" onclick="location.href='./total_companies.html'">
+                    <div class="menu-card primary-card group-startup"
+                        onclick="location.href='./total_companies.html'">
                         <div class="card-icon-wrapper startup-db">
                             <span class="material-symbols-outlined">database</span>
                         </div>
-                        <h3>Companies</h3>
-                        <p>유망 기업 정보 및 데이터베이스 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="card-content-wrap">
+                            <div class="text-block">
+                                <h3>Companies <span class="count-badge" id="count-total-companies">-</span></h3>
+                                <p>유망 기업 정보 및 데이터베이스 관리</p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Column 2: 매도자 정보 관련 -->
-                    <div class="menu-card primary-card group-ma-seller" onclick="location.href='./total_sellers.html'">
+                    <div class="menu-card primary-card group-ma-seller"
+                        onclick="location.href='./total_sellers.html'">
                         <div class="card-icon-wrapper seller-icon">
                             <span class="material-symbols-outlined">storefront</span>
                         </div>
-                        <h3>M&A Sellers</h3>
-                        <p>매도자 통합 정보 및 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="card-content-wrap">
+                            <div class="text-block">
+                                <h3>M&A Sellers <span class="count-badge" id="count-total-sellers">-</span></h3>
+                                <p>매도자 통합 정보 및 관리</p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Column 3: 매수자 정보 관련 -->
-                    <div class="menu-card primary-card group-ma-buyer" onclick="location.href='./total_buyers.html'">
+                    <div class="menu-card primary-card group-ma-buyer"
+                        onclick="location.href='./total_buyers.html'">
                         <div class="card-icon-wrapper buyer-icon">
                             <span class="material-symbols-outlined">groups</span>
                         </div>
-                        <h3>M&A Buyers</h3>
-                        <p>매수자 통합 정보 및 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="card-content-wrap">
+                            <div class="text-block">
+                                <h3>M&A Buyers <span class="count-badge" id="count-total-buyers">-</span></h3>
+                                <p>매수자 통합 정보 및 관리</p>
+                            </div>
                         </div>
                     </div>
 
@@ -216,53 +83,30 @@
                     <div class="menu-card card-companies" onclick="location.href='./my_companies.html'">
                         <h3>My Companies</h3>
                         <p>내 기업 정보 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="my-count-info">
+                            <span class="count-tag public">공개 <span id="count-my-companies-public">0</span></span>
+                            <span class="count-tag private">비공개 <span id="count-my-companies-private">0</span></span>
                         </div>
                     </div>
 
                     <div class="menu-card card-sellers" onclick="location.href='./my_sellers.html'">
                         <h3>My Sellers</h3>
                         <p>내 매도자 정보 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="my-count-info">
+                            <span class="count-tag public">공개 <span id="count-my-sellers-public">0</span></span>
+                            <span class="count-tag private">비공개 <span id="count-my-sellers-private">0</span></span>
                         </div>
                     </div>
 
                     <div class="menu-card card-buyers" onclick="location.href='./my_buyers.html'">
                         <h3>My Buyers</h3>
                         <p>내 매수자 정보 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
+                        <div class="my-count-info">
+                            <span class="count-tag public">공개 <span id="count-my-buyers-public">0</span></span>
+                            <span class="count-tag private">비공개 <span id="count-my-buyers-private">0</span></span>
                         </div>
                     </div>
 
-                    <!-- Row 3: File Sub-menus -->
-                    <!-- 
-                    <div class="menu-card card-startup-files" onclick="location.href='./files.html'">
-                        <h3>Companies Files</h3>
-                        <p>기업 정보 관련 문서 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
-                        </div>
-                    </div>
-
-                    <div class="menu-card card-sellers-files" onclick="location.href='./sellers_files.html'">
-                        <h3>Sellers Files</h3>
-                        <p>매도자 관련 문서 및 자료 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
-                        </div>
-                    </div>
-
-                    <div class="menu-card card-buyers-files" onclick="location.href='./buyers_files.html'">
-                        <h3>Buyers Files</h3>
-                        <p>매수자 관련 문서 및 자료 관리</p>
-                        <div class="card-arrow">
-                            <span class="material-symbols-outlined">arrow_forward</span>
-                        </div>
-                    </div>
-                    -->
                 </div>
             </section>
 

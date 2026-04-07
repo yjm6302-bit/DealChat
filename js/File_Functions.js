@@ -1,33 +1,33 @@
 import { APIcall } from './APIcallFunction.js';
-// tiktoken은 AI_Functions.js에서 처리하도록 이동됨
+
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // 텍스트 품질 검증 함수 (외부 사용 가능하도록 export)
 export const validateText = (text) => {
-    if (!text) return { valid: false, msg: "텍스트를 추출할 수 없습니다. (빈 내용)" };
+    if (!text) return { valid: false, severity: 'error', msg: "텍스트를 추출할 수 없습니다. (빈 내용)" };
     const clean = text.trim();
 
-    // 1. 최소 길이 체크 (5자 미만은 문맥 파악 불가로 판단)
+    // 1. 최소 길이 체크 (5자 미만 → 이미지 PDF 가능성, 경고만)
     if (clean.length < 5) {
-        return { valid: false, msg: `문서 내용이 너무 짧습니다. (현재 ${clean.length}자 / 최소 5자)\n의미 있는 검색을 위해 더 많은 내용이 필요합니다.` };
+        return { valid: false, severity: 'warning', msg: `이 문서에서 텍스트를 추출할 수 없습니다.\n스캔된 이미지 PDF일 가능성이 높습니다.\n\n파일 자체는 저장되지만 AI 검색은 지원되지 않습니다.\n그래도 업로드하시겠습니까?` };
     }
 
     // 2. 인코딩 깨짐 감지 (깨진 문자 비율이 3% 이상이면 손상된 문서로 간주)
     const brokenChars = (clean.match(/\uFFFD/g) || []).length;
     if (brokenChars > 0 && (brokenChars / clean.length) > 0.03) {
-        return { valid: false, msg: "문서 텍스트가 깨져있거나 인코딩 오류가 감지되었습니다.\n(올바른 PDF/문서 형식인지 확인해주세요)" };
+        return { valid: false, severity: 'error', msg: "문서 텍스트가 깨져있거나 인코딩 오류가 감지되었습니다.\n(올바른 PDF/문서 형식인지 확인해주세요)" };
     }
 
-    // 3. 무의미한 반복 패턴 감지 (동일 문자 10자 이상 반복, 예: "..........")
-    if (/(.)\1{9,}/.test(clean)) {
-        return { valid: false, msg: "무의미한 반복 패턴이 감지되었습니다.\n(정상적인 텍스트 문서가 아닐 수 있습니다)" };
+    // 3. 무의미한 반복 패턴 감지 (동일 문자 10자 이상 반복, 단 . 이나 - 은 목차 등으로 흔하기에 제외)
+    if (/(?![.-])(.)\1{9,}/.test(clean)) {
+        return { valid: false, severity: 'error', msg: "무의미한 반복 패턴이 감지되었습니다.\n(정상적인 텍스트 문서가 아닐 수 있습니다)" };
     }
 
-    // 4. 정보 밀도 체크 (특수문자/공백 제외한 실제 언어 텍스트가 20자 미만)
+    // 4. 정보 밀도 체크 (특수문자/공백 제외한 실제 언어 텍스트가 20자 미만 → 경고)
     const meaningfulContent = clean.replace(/[^가-힣a-zA-Z0-9]/g, '');
     if (meaningfulContent.length < 20) {
-        return { valid: false, msg: "유의미한 정보(한글/영문/숫자)가 너무 적습니다.\n(이미지 위주이거나 기호가 대부분인 문서입니다)" };
+        return { valid: false, severity: 'warning', msg: `유의미한 텍스트가 거의 없는 문서입니다.\n(이미지 위주이거나 기호가 대부분)\n\n파일 자체는 저장되지만 AI 검색은 지원되지 않습니다.\n그래도 업로드하시겠습니까?` };
     }
 
     return { valid: true };
@@ -127,6 +127,12 @@ export function filetypecheck(file) {
 
 
 export async function fileUpload(file, user_id = null, companyId = null, preExtractedText = null, vectorNamespace = undefined) {
+    // Safety check: If companyId is passed as a URL string or literal 'new'
+    if (typeof companyId === 'string' && (companyId.startsWith('http') || companyId === 'new')) {
+        console.warn(`fileUpload: companyId is invalid (${companyId}). Resetting to null.`);
+        companyId = null;
+    }
+
     // 1. 텍스트 추출
     let extractedText = preExtractedText;
 
@@ -158,12 +164,14 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
         console.log('Using pre-extracted text. Length:', extractedText.length);
     }
 
-    // 2. 텍스트 품질 검증
+    // 2. 텍스트 품질 검증 (업로드는 무조건 진행하되, 품질 상태만 파악)
     const validation = validateText(extractedText);
     if (!validation.valid) {
-        const confirmMsg = `파일 업로드 불가: ${validation.msg}\n\n텍스트 추출에 실패했거나 내용이 충분하지 않은 문서입니다.`;
-        alert(confirmMsg);
-        throw new Error(validation.msg); // 업로드 중단
+        console.warn(`Text Validation Issue: ${validation.msg}`);
+        // 텍스트가 없거나 너무 짧은 경우 파일명을 플레이스홀더로 사용
+        if (!extractedText || extractedText.trim().length < 5) {
+            extractedText = `[텍스트 미추출/이미지 문서] ${file.name}`;
+        }
     }
 
     // 3. Base64 변환 및 업로드
@@ -192,17 +200,22 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
 
             console.log('Upload payload:', {
                 file_name: payload.file_name,
-                parsedText_length: payload.parsedText.length,
-                summary_length: payload.summary.length,
-                summary_preview: payload.summary.substring(0, 50),
+                parsedText_length: payload.parsedText ? payload.parsedText.length : 0,
+                summary_length: payload.summary ? payload.summary.length : 0,
+                summary_preview: payload.summary ? payload.summary.substring(0, 50) : '',
                 companyId: payload.companyId,
                 vectorNamespace: payload.vectorNamespace
             });
 
+            console.log('Sending upload request to endpoint:', payload.action === 'upload' ? 'UploadHandler' : 'REST/AI Handler');
             try {
                 const response = await APIcall(payload); // Defaults to Supabase endpoint
-                resolve(response);
+                const result = await response.json();    // JSON 파싱
+
+                console.log('Upload success result:', result);
+                resolve(result);
             } catch (err) {
+                console.error('APIcall failed during upload:', err);
                 reject(err);
             }
         };

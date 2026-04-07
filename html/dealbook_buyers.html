@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>바이어 정보 - DealChat</title>
+    <title>매수자 정보 - DealChat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,15 +15,17 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <style>
-        * {
-            box-sizing: border-box;
+        /* 초기 로딩 시 작성 모드 잔상 방지 */
+        body.is-loading .app-container { opacity: 0; pointer-events: none; }
+
+        :root {
+            --page-theme-color: #0d9488;
+            --page-theme-shadow: rgba(13, 148, 136, 0.2);
+            --page-theme-light: #f0fdfa;
         }
 
-        /* Teal 테마 (Buyer) */
-        :root {
-            --primary-teal: #0d9488;
-            --primary-teal-soft: #f0fdfa;
-            --primary-teal-hover: #0f766e;
+        * {
+            box-sizing: border-box;
         }
 
         .btn-status-chip {
@@ -39,10 +41,28 @@
         }
 
         .btn-status-chip.active {
-            background: var(--primary-teal);
-            border-color: var(--primary-teal);
+            background: var(--page-theme-color);
+            border-color: var(--page-theme-color);
             color: #fff;
-            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.25);
+            box-shadow: 0 4px 10px var(--page-theme-shadow);
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spin-animation {
+            animation: rotate 1.5s linear infinite;
+            display: inline-block !important;
+        }
+
+        .model-option:hover {
+            background-color: #f1f5f9 !important;
+        }
+
+        .model-option.active {
+            background-color: rgba(13, 148, 136, 0.05) !important;
         }
 
         .sidebar .panel-header {
@@ -50,8 +70,8 @@
         }
 
         #btn-save-buyer {
-            background: var(--primary-teal) !important;
-            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+            background: var(--page-theme-color) !important;
+            box-shadow: 0 4px 12px var(--page-theme-shadow);
             border: none;
             color: white;
         }
@@ -76,10 +96,36 @@
         .sidebar { flex: 2; min-width: 400px; display: flex; flex-direction: column; background: #ffffff; border-right: 1px solid var(--border-color); }
         .main-content { flex: 1; min-width: 300px; display: flex; flex-direction: column; min-width: 0; }
         .right-panel { flex: 1; min-width: 320px; display: flex; flex-direction: column; background: #ffffff; border-left: 1px solid var(--border-color); }
+        .suggested-prompts {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: 600px;
+        }
+
+        /* 드래그 앤 드롭 스타일 */
+        .file-list-card { transition: all 0.2s ease; position: relative; }
+        .file-list-card.drag-over {
+            border: 2px dashed #0d9488 !important;
+            background-color: rgba(13, 148, 136, 0.04) !important;
+            box-shadow: 0 0 15px rgba(13, 148, 136, 0.15) !important;
+        }
+        .file-list-card.drag-over::after {
+            content: "여기에 드롭하여 파일 업로드";
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95); color: #0d9488;
+            padding: 8px 20px; border-radius: 20px;
+            font-weight: 700; font-size: 13px;
+            border: 1px solid #0d9488; pointer-events: none;
+            z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); white-space: nowrap;
+        }
+        .file-list-card.drag-over * { pointer-events: none; }
     </style>
 </head>
 
-<body>
+<body class="theme-mode-buyers is-loading">
     <!-- Global Loading Overlay -->
     <div id="global-loader">
         <div class="loader-logo">DealChat</div>
@@ -89,7 +135,7 @@
     <div class="app-container">
 
         <!-- ============================================================
-             좌 패널 (Sidebar) — 바이어 정보 입력폼
+             좌 패널 (Sidebar) — 매수자 정보 입력폼
         ============================================================ -->
         <aside class="sidebar" id="buyer-sidebar">
             <!-- 헤더 -->
@@ -101,8 +147,8 @@
                 </button>
                 <h2 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;
                            display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 20px; color: var(--primary-teal);">person_search</span>
-                    <span id="sidebar-header-title">바이어 정보</span>
+                    <span class="material-symbols-outlined" style="font-size: 20px; color: var(--page-theme-color);">person_search</span>
+                    <span id="sidebar-header-title">매수자 정보</span>
                 </h2>
             </div>
 
@@ -115,7 +161,7 @@
                     <button id="ai-auto-fill-btn"
                         style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <span class="material-symbols-outlined"
-                            style="font-size: 20px; color: var(--primary-teal);">auto_awesome</span>
+                            style="font-size: 20px; color: var(--page-theme-color);">auto_awesome</span>
                         <span style="font-size: 14px; font-weight: 600; color: #475569;">분석된 파일로 AI가 자동 입력하기</span>
                     </button>
                     <p style="margin: 4px 0 0 4px; font-size: 11px; color: #94a3b8;">* 업로드된 파일 내용을 바탕으로 기본 정보를 추출합니다.</p>
@@ -123,7 +169,8 @@
 
                 <!-- 진행 현황 -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">account_tree</span>
                         진행 현황<span style="color: #ef4444; margin-left: 2px;">*</span>
                     </p>
                     <div id="status-chip-group" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: #f8fafc;
@@ -135,18 +182,22 @@
                     <input type="hidden" id="buyer-status" value="대기">
                 </div>
 
-                <!-- 기업명(바이어) + 산업 -->
+                <!-- 매수자명 + 산업 -->
                 <div style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">기업명(바이어)<span style="color: #ef4444; margin-left: 2px;">*</span></p>
+                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">person_search</span>
+                            매수자명<span style="color: #ef4444; margin-left: 2px;">*</span></p>
                         <div style="padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff; height: 42px; display: flex; align-items: center; position: relative;">
-                            <span class="notebook-title" id="buyer-name-editor" contenteditable="true" style="font-size: 14px; font-weight: 700; color: #1e293b; width: 100%; outline: none;" placeholder="바이어명"></span>
-                            <!-- 바이어 기업명 추천 레이어 -->
+                            <span class="notebook-title" id="buyer-name-editor" contenteditable="true" style="font-size: 14px; font-weight: 700; color: #1e293b; width: 100%; outline: none;" placeholder="매수자명"></span>
+                            <!-- 매수자 기업명 추천 레이어 -->
                             <div id="buyer-company-suggestions" style="display: none; position: absolute; top: 48px; left: 0; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 10000; overflow: hidden;"></div>
                         </div>
                     </div>
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">관심 산업<span style="color: #ef4444; margin-left: 2px;">*</span></p>
+                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">category</span>
+                            관심 산업<span style="color: #ef4444; margin-left: 2px;">*</span></p>
                         <select id="buyer-industry" style="width: 100%; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px;">
                             <option value="선택해주세요" selected>선택해주세요</option>
                             <option value="AI">AI</option>
@@ -179,52 +230,66 @@
                 <!-- 담당자 + 이메일 -->
                 <div style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">담당자</p>
+                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">person</span>
+                            담당자</p>
                         <input type="text" id="buyer-manager" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px;" placeholder="담당자 성명">
                     </div>
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">이메일</p>
+                        <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">mail</span>
+                            이메일</p>
                         <input type="email" id="buyer-email" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px;" placeholder="example@email.com">
                     </div>
                 </div>
 
                 <!-- 가용 자금 -->
                 <div style="margin-bottom: 16px;">
-                    <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">가용 자금 (억원)</p>
+                    <p style="margin: 0 0 6px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">payments</span>
+                        가용 자금 (억원)</p>
                     <input type="text" id="buyer-investment" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #ffffff; color: #1e293b; height: 42px;" placeholder="숫자만 입력 (단위: 억원)">
                 </div>
 
                 <!-- 상세 소개 및 요약 -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">상세 소개 및 요약<span style="color: #ef4444; margin-left: 2px;">*</span></p>
-                    <textarea id="buyer-summary" style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: #334155; overflow: hidden;" placeholder="바이어에 대한 소개 및 요약을 입력하세요..."></textarea>
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
+                        상세 소개 및 요약<span style="color: #ef4444; margin-left: 2px;">*</span></p>
+                    <textarea id="buyer-summary" style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: #334155; overflow: hidden;" placeholder="매수자에 대한 소개 및 요약을 입력하세요..."></textarea>
                 </div>
 
                 <!-- 매칭 희망 기업 및 요건 -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">매칭 희망 기업 및 요건</p>
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">business_center</span>
+                        매칭 희망 기업 및 요건</p>
                     <textarea id="buyer-interest-summary" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: #334155; overflow: hidden;" placeholder="인수 희망 분야, 지역, 투자 규모 등 상세 요건을 입력하세요..."></textarea>
                 </div>
 
                 <!-- 기타 사항 (메모) -->
                 <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary);">기타 사항 (메모)</p>
+                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                        기타 사항 (메모)</p>
                     <textarea id="buyer-memo" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: #334155; overflow: hidden;" placeholder="기타 특이사항이나 내부 메모를 입력하세요..."></textarea>
                     
-                    <!-- 작성자 정보 -->
-                    <div id="memo-author-info" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px;">
-                        <div id="memo-update-date" style="font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 10px; padding-left: 4px;"></div>
-                        <div id="memo-author-info-box" style="display: flex; align-items: center; gap: 12px; background: #ffffff; padding: 4px 16px 4px 6px; border-radius: 40px; border: 1.5px solid #e2e8f0; margin-top: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                            <img id="memo-author-avatar" src="../img/avatars/default-avatar.png" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; border: 1px solid #e2e8f0; flex-shrink: 0;">
+                    <!-- 작성자/업데이트 정보 UI (기본적으로 숨김, 리포트 모드에서만 표시) -->
+                    <div id="memo-user-info-section" style="display: none; align-items: center; justify-content: space-between; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                        <!-- 업데이트 일자 (좌측) -->
+                        <div id="memo-update-date" style="font-size: 11px; color: #94a3b8; font-weight: 500; white-space: nowrap;"></div>
+
+                        <div id="memo-author-card" class="user-profile-card-oval" style="display: flex; align-items: center; gap: 16px; background: #ffffff; padding: 10px 24px 10px 10px; border-radius: 40px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;">
+                            <img class="user-avatar" src="" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; border: 1px solid #e2e8f0; flex-shrink: 0;">
                             <div style="display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;">
                                 <div style="display: flex; align-items: center; font-size: 13px; line-height: 1.4; white-space: nowrap;">
-                                    <span id="memo-author-company" style="color: #64748b; font-weight: 500;">-</span>
-                                    <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
-                                    <span id="memo-author-affiliation" style="color: #64748b; font-weight: 500;">-</span>
-                                    <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
-                                    <span id="memo-author-name" style="font-weight: 700; color: #1e293b;">-</span>
-                                    <span style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
-                                    <span id="memo-author-email" style="color: #64748b; font-weight: 400;">-</span>
+                                    <span class="user-company" style="color: #64748b; font-weight: 500;">-</span>
+                                    <span class="user-separator" style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
+                                    <span class="user-affiliation" style="color: #64748b; font-weight: 500;">-</span>
+                                    <span class="user-separator" style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
+                                    <span class="user-name" style="font-weight: 700; color: #1e293b;">-</span>
+                                    <span class="user-separator user-email-sep" style="color: #e2e8f0; margin: 0 6px; font-weight: 300;">/</span>
+                                    <span class="user-email" style="color: #64748b; font-weight: 400;">-</span>
                                 </div>
                             </div>
                         </div>
@@ -242,7 +307,7 @@
                     <span class="material-symbols-outlined" style="font-size: 16px;">visibility_off</span>
                     비공개
                 </button>
-                <button id="btn-save-buyer" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 8px; font-size: 13px; border: none; background: var(--primary-teal); color: white; white-space: nowrap;">
+                <button id="btn-save-buyer" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 8px; font-size: 13px; border: none; background: var(--page-theme-color); color: white; white-space: nowrap;">
                     <span class="material-symbols-outlined" style="font-size: 16px;">save</span>
                     저장하기
                 </button>
@@ -255,7 +320,7 @@
         <main class="main-content" style="height: 100vh; overflow: hidden; border-right: 1px solid var(--border-color); border-left: 1px solid var(--border-color);">
             <header class="panel-header" style="height: 65px; padding: 0 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
                 <h2 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 20px; color: var(--primary-teal);">smart_toy</span>
+                    <span class="material-symbols-outlined" style="font-size: 20px; color: var(--page-theme-color);">smart_toy</span>
                     AI 인텔리전스
                 </h2>
                 <div style="position: absolute; right: 15px; display: flex; align-items: center; gap: 8px;">
@@ -281,12 +346,23 @@
                 </div>
             </section>
 
-            <footer class="input-area" style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #ffffff;">
+            <footer class="input-area" style="padding: 12px 20px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; flex-direction: column; align-items: flex-start;">
+                <!-- AI 모델 선택기 -->
+                <div class="model-selector-container" style="margin-bottom: 8px; position: relative;">
+                    <button id="btn-model-selector" class="btn-model-selector" title="AI 모델 선택">
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: #6366f1;">deployed_code</span>
+                        <span id="current-model-name" style="font-size: 13px;">연결 중...</span>
+                        <span class="material-symbols-outlined" style="font-size: 16px;">expand_less</span>
+                    </button>
+                    <div id="model-dropdown" class="model-dropdown" style="display: none; position: absolute; bottom: calc(100% + 8px); left: 0; background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); min-width: 240px; z-index: 9999; overflow: hidden; padding: 0;">
+                        <!-- 모델 옵션들이 JS를 통해 동적으로 생성됩니다 -->
+                    </div>
+                </div>
                 <div class="input-wrapper" style="max-width: 100%; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-radius: 20px;">
-                    <textarea id="chat-input" placeholder="업로드된 소스에 대해 질문해보세요..." rows="1" style="background: transparent; color: #334155; font-size: 15px; margin: 0; padding-top: 12px; padding-bottom: 12px;"></textarea>
+                    <textarea id="chat-input" placeholder="업로드된 소스에 대해 질문해보세요..." rows="1" style="background: transparent; color: #334155; font-size: 15px; margin: 0; padding-top: 8px; padding-bottom: 8px;"></textarea>
                     <div class="input-tools-right">
                         <button class="btn-send" id="send-btn">
-                            <span class="material-symbols-outlined" style="color: var(--primary-teal);">send</span>
+                            <span class="material-symbols-outlined" style="color: var(--page-theme-color);">send</span>
                         </button>
                     </div>
                 </div>
@@ -304,31 +380,23 @@
                 </h2>
             </div>
             <div class="panel-content" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 20px;">
-                <!-- 학습 데이터 -->
+                <!-- 데이터 리스트 -->
                 <div class="data-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
                         <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">학습 데이터</h3>
-                        <button class="btn-new-source" id="add-source-training" style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+                        <button class="btn-new-source" id="add-source-training"
+                            style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
                             <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
                             <span>추가</span>
                         </button>
                     </div>
-                    <div class="file-list-card" style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 250px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-training" style="margin: 0; padding: 0; list-style: none;"></ul>
-                    </div>
-                </div>
-
-                <!-- 비학습 데이터 -->
-                <div class="data-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
-                        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">비학습 데이터</h3>
-                        <button class="btn-new-source" id="add-source-non-training" style="width: auto; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
-                            <span>추가</span>
-                        </button>
-                    </div>
-                    <div class="file-list-card" style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 250px; overflow-y: auto;">
-                        <ul class="source-list" id="source-list-non-training" style="margin: 0; padding: 0; list-style: none;"></ul>
+                    <div class="file-list-card" id="training-drop-zone"
+                        style="background: white; border: 1px solid var(--border-color); border-radius: 12px; min-height: 100px; max-height: 600px; overflow-y: auto; margin-bottom: 8px;">
+                        <ul class="source-list" id="source-list-training"
+                            style="margin: 0; padding: 0; list-style: none;">
+                            <!-- 업로드된 파일이 여기에 표시됩니다 -->
+                        </ul>
                     </div>
                 </div>
 
@@ -344,18 +412,18 @@
             <div class="modal-content border-0" style="border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;">
                 <div class="modal-header border-0 pb-0 pt-4 px-4 bg-white d-flex align-items-center justify-content-between">
                     <h5 class="modal-title fw-bold" id="ndaModalLabel" style="font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px;">
-                        <span class="material-symbols-outlined" style="color: #0d9488; font-size: 28px;">verified_user</span>
+                        <span class="material-symbols-outlined" style="color: var(--page-theme-color); font-size: 28px;">verified_user</span>
                         비밀유지확약서 (NDA)
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4 bg-white">
                     <div class="nda-content-box p-4 mb-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; font-size: 13.5px; color: #475569; line-height: 1.8; max-height: 280px; overflow-y: auto;">
-                        <p class="mb-3 fw-bold" style="color: #1e293b; font-size: 15px; border-bottom: 2px solid #f0fdfa; padding-bottom: 8px;">[정보 제공에 관한 비밀유지 의무]</p>
-                        본인은 'DealChat' 서비스를 통해 제공받는 관심 바이어의 모든 정보(매칭 조건, 투자 성향, 기밀 검토 사항 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을 확약합니다.<br><br>
-                        <span style="color: #0d9488; font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적 이외의 용도로 사용하지 아니한다.<br><br>
-                        <span style="color: #0d9488; font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게 누설하거나 공개하지 아니한다.<br><br>
-                        <span style="color: #0d9488; font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가 발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
+                        <p class="mb-3 fw-bold" style="color: #1e293b; font-size: 15px; border-bottom: 2px solid var(--page-theme-light); padding-bottom: 8px;">[정보 제공에 관한 비밀유지 의무]</p>
+                        본인은 'DealChat' 서비스를 통해 제공받는 관심 매수자의 모든 정보(매칭 조건, 투자 성향, 기밀 검토 사항 등)가 극히 기밀임을 인지하며, 다음 사항을 준수할 것을 확약합니다.<br><br>
+                        <span style="color: var(--page-theme-color); font-weight: 600;">1. 정보의 사용 목적 제한</span><br>제공받은 정보를 본 거래의 검토 목적 이외의 용도로 사용하지 아니한다.<br><br>
+                        <span style="color: var(--page-theme-color); font-weight: 600;">2. 제3자 누설 금지</span><br>정보의 내용 및 거래 진행 사실을 제3자에게 누설하거나 공개하지 아니한다.<br><br>
+                        <span style="color: var(--page-theme-color); font-weight: 600;">3. 위반 시 책임 보상</span><br>본 확약 사항을 위반하여 상대방에게 손해가 발생할 경우, 모든 법적 책임을 부담하며 손해를 전액 배상한다.<br><br>
                         위의 내용을 충분히 숙지하였으며, 신의성실의 원칙에 따라 동의합니다.
                     </div>
 
@@ -378,13 +446,13 @@
                                     style="border-radius: 12px; font-size: 15px; padding: 14px 18px; border: 2px solid #f1f5f9; background: #fbfcfd; transition: all 0.2s;">
                             </div>
                             <p id="nda-name-hint" class="small mt-2 mb-0" style="color: #94a3b8; font-size: 12px; margin-left: 2px;">
-                                * 현재 로그인 중인 <strong style="color: #0d9488;"><span id="logged-in-user-name"></span></strong> 님의 성함을 입력해주세요.
+                                * 현재 로그인 중인 <strong style="color: var(--page-theme-color);"><span id="logged-in-user-name"></span></strong> 님의 성함을 입력해주세요.
                             </p>
                         </div>
 
                         <div class="mb-2">
                             <label class="form-label fw-bold mb-2" style="font-size: 15px; color: #1e293b;">동의 문구 확인</label>
-                            <p class="mb-3" style="color: #0d9488; font-size: 16px; background: #f0fdfa; padding: 16px; border-radius: 12px; border: 1px dashed #0d9488; text-align: center; margin-bottom: 12px !important;">
+                            <p class="mb-3" style="color: var(--page-theme-color); font-size: 16px; background: var(--page-theme-light); padding: 16px; border-radius: 12px; border: 1px dashed var(--page-theme-color); text-align: center; margin-bottom: 12px !important;">
                                 <strong style="font-size: 18px; display: block; margin-bottom: 4px;">위 사항을 위반하지 않을 것을 약속합니다</strong>
                                 <span style="font-size: 13px; color: #64748b; font-weight: 500;">* 위 문구를 아래 박스에 똑같이 입력해주세요.</span>
                             </p>
@@ -399,7 +467,7 @@
                     <button type="button" id="nda-modal-cancel-btn" class="btn px-4 py-2 rounded-pill fw-bold"
                         style="background: #f1f5f9; color: #64748b; font-size: 15px; flex: 1; height: 50px;">취소</button>
                     <button type="button" id="btn-confirm-nda" class="btn btn-primary px-4 py-2 rounded-pill fw-bold" disabled
-                        style="background: #0d9488; border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의 및 리포트 보기</button>
+                        style="background: var(--page-theme-color); border: none; font-size: 15px; flex: 2; height: 50px; box-shadow: 0 4px 15px var(--page-theme-shadow); display: flex; align-items: center; justify-content: center; opacity: 0.5;">동의 및 리포트 보기</button>
                 </div>
             </div>
         </div>
@@ -407,14 +475,12 @@
 
     <!-- 스크립트 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/front-config.js"></script>
-    <!-- dealbook_buyer_editor.js로 파일명 변경하여 로직 분리 관리 가능 -->
-    <script src="../js/footer_loader.js"></script>
     <script src="../js/dealbook_buyers.js?v=20260311_06" type="module"></script>
 </body>
 

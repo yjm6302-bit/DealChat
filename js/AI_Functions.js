@@ -1,42 +1,40 @@
 import { APIcall } from './APIcallFunction.js';
 
-// tiktoken 로딩 실패 대비 로직
-let tiktokenEncoding = null;
-import("https://cdn.jsdelivr.net/npm/js-tiktoken@1.0.17/+esm")
-    .then(m => { tiktokenEncoding = m.getEncoding("cl100k_base"); })
-    .catch(e => console.warn("js-tiktoken ESM load failed, falling back to heuristic. This is usually okay."));
-
 // window.config 안전 참조를 위한 헬퍼
-const getConfig = () => window.config || { supabase: { uploadHandlerUrl: '', aiHandlerUrl: '' }, ai: { model: 'gpt-4o', tokenLimits: { 'gpt-4o': { maxContextTokens: 128000, maxOutputTokens: 4096, safetyMargin: 5000 } } } };
+const getConfig = () => window.config || { 
+    supabase: { uploadHandlerUrl: '', aiHandlerUrl: '' }, 
+    ai: { 
+        model: 'gemini-1.5-flash', 
+        tokenLimits: { 
+            'gemini-1.5-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 10000 } 
+        } 
+    } 
+};
 
-// countTokens 함수
+// countTokens 함수 (Gemini의 넓은 컨텍스트를 고려한 글자 수 기반 근사치)
 export function countTokens(text) {
     if (typeof text !== 'string') return 0;
-    try {
-        if (tiktokenEncoding) {
-            return tiktokenEncoding.encode(text).length;
-        }
-        return Math.ceil(text.length * 1.1);
-    } catch (e) {
-        return Math.ceil(text.length * 1.1);
-    }
+    // 한글/영문 혼합 시 보통 1토큰 당 2~4글자 정도이나, 보수적으로 1:1 대응 수준으로 계산하거나 0.8배 수준으로도 충분함
+    // Gemini 1.5 Flash는 1M 토큰을 지원하므로 아주 정밀한 계산보다는 대략적인 가이드라인만 제공
+    return Math.ceil(text.length / 2); 
 }
 
-export function addAiResponse(userInput, sourceTexts) {
+export function addAiResponse(userInput, sourceTexts, overrideModel = null) {
     const config = getConfig();
     const AI_ENDPOINT = config.supabase.aiHandlerUrl;
-    const modelName = config.ai.model || 'gpt-4o';
-    let modelConfig = config.ai.tokenLimits[modelName] || config.ai.tokenLimits['gpt-4o'];
+    const modelName = overrideModel || config.ai.model || 'gemini-2.5-flash';
+    let modelConfig = config.ai.tokenLimits[modelName] || config.ai.tokenLimits['gemini-2.1-flash'] || config.ai.tokenLimits['gemini-2.0-flash'];
 
     const MAX_TOKEN = modelConfig.maxContextTokens;
     const SAFETY_MARGIN = modelConfig.safetyMargin;
 
-    console.log(`🤖 Using model: ${modelName} (Max: ${MAX_TOKEN} tokens)`);
+    console.log(`🤖 Using Gemini Model: ${modelName} (Max: ${MAX_TOKEN} tokens)`);
 
     let truncatedSource = sourceTexts || "";
+    // Gemini는 100만 토큰까지 수용 가능하므로, 50만자(약 20~30만 토큰 이상) 이하일 경우 자를 필요가 없음
     if (countTokens(truncatedSource) > (MAX_TOKEN - SAFETY_MARGIN)) {
-        const charLimit = Math.floor((MAX_TOKEN - SAFETY_MARGIN) / 1.1);
-        truncatedSource = truncatedSource.substring(0, charLimit) + "\n\n... (Truncated) ...";
+        const charLimit = (MAX_TOKEN - SAFETY_MARGIN) * 2;
+        truncatedSource = truncatedSource.substring(0, charLimit) + "\n\n... (Content truncated due to extreme size) ...";
     }
 
     let prompts = `
@@ -50,13 +48,14 @@ export function addAiResponse(userInput, sourceTexts) {
         Answer in Korean. Professional tone.
     `.trim();
 
-    const tokenCount = countTokens(prompts);
-    if (tokenCount > MAX_TOKEN) {
-        alert("Token limit exceeded.");
-        return Promise.reject(new Error('Token limit exceeded'));
-    }
+    const payload = { 
+        model: modelName, // 선택된 모델명을 백엔드로 전달
+        body: prompts,
+        max_tokens: modelConfig.maxOutputTokens, // 명시적으로 최대 출력 토큰 전달
+        temperature: 0.1 // 일관성을 위해 낮은 다양성 유지
+    };
 
-    return APIcall({ body: prompts }, AI_ENDPOINT, { 'Content-Type': 'application/json' });
+    return APIcall(payload, AI_ENDPOINT, { 'Content-Type': 'application/json' });
 }
 
 export async function searchVectorDB(query, companyId) {

@@ -28,9 +28,9 @@ async function generateAndStoreEmbeddings(
     userId: string,
     supabase: any
 ) {
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
-        console.warn("OPENAI_API_KEY is missing. Skipping vector indexing.");
+        console.warn("GEMINI_API_KEY is missing. Skipping vector indexing.");
         return;
     }
 
@@ -44,15 +44,13 @@ async function generateAndStoreEmbeddings(
         const chunk = parsedText.substring(i, i + chunkSize);
         if (chunk.length < 50) continue;
 
-        const embeddingResp = await fetch("https://api.openai.com/v1/embeddings", {
+        const embeddingResp = await fetch(`https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${apiKey}`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "text-embedding-3-small",
-                input: chunk,
+                content: { parts: [{ text: chunk }] }
             }),
         });
 
@@ -63,8 +61,8 @@ async function generateAndStoreEmbeddings(
 
         const embeddingData = await embeddingResp.json();
 
-        if (embeddingData.data && embeddingData.data[0]) {
-            const embedding = embeddingData.data[0].embedding;
+        if (embeddingData.embedding && embeddingData.embedding.values) {
+            const embedding = embeddingData.embedding.values;
 
             const { error: insErr } = await supabase.from('document_sections').insert({
                 content: chunk,
@@ -102,7 +100,7 @@ Deno.serve(async (req) => {
         if (contentType.includes("multipart/form-data")) {
             const formData = await req.formData();
             const file = formData.get("file") as File;
-            const userId = formData.get("user_id") as string;
+            const userId = (formData.get("user_id") || formData.get("userId") || "anonymous") as string;
             const action = formData.get("action") as string || "upload";
             const table = formData.get("table") as string || "files";
 
@@ -120,11 +118,13 @@ Deno.serve(async (req) => {
 
                 if (uploadError) throw uploadError;
 
-                // Update Database
-                const fileMetadata = {
+                // Update Database (Unified schema strategy)
+                const fileMetadata: Record<string, any> = {
                     file_name: fileName,
-                    location: storagePath,
-                    userId: userId,
+                    location: storagePath,      // Legacy
+                    storage_path: storagePath,  // v2
+                    userId: userId,             // Legacy
+                    user_id: userId,            // v2
                     summary: formData.get("summary") as string || "",
                 };
 
@@ -133,7 +133,10 @@ Deno.serve(async (req) => {
                     .insert(fileMetadata)
                     .select();
 
-                if (dbError) throw dbError;
+                if (dbError) {
+                    console.error("Database insert error details:", dbError);
+                    throw dbError;
+                }
 
                 return createResponse({ message: "Upload success", data });
             }
@@ -212,7 +215,10 @@ Deno.serve(async (req) => {
 
             // Handle Base64 Upload (often from File_Functions.js)
             if (rawData.is_base64 && rawData.content) {
-                const { content, file_name, content_type, userId, is_base64: _is_base64, ...metadata } = rawData;
+                const { content, file_name, content_type, is_base64: _is_base64, ...metadata } = rawData;
+                
+                // Flexible userId extraction
+                const userId = rawData.user_id || rawData.userId || 'anonymous';
 
                 // [RAG] Parsing Parameters
                 const parsedText = metadata.parsedText;
@@ -239,17 +245,18 @@ Deno.serve(async (req) => {
                     });
                 if (uploadError) throw uploadError;
 
-                // 2. Insert into Database
+                // 2. Insert into Database (Unified schema strategy)
                 const now = new Date().toISOString();
                 const dbRow: Record<string, any> = {
                     file_name: file_name,
-                    location: storagePath,
-                    userId: userId,
-                    created_at: now,
-                    updated_at: now,
+                    location: storagePath,      // Legacy
+                    storage_path: storagePath,  // v2
+                    userId: userId,             // Legacy
+                    user_id: userId,            // v2
+                    created_at: now,            // Exists in both schemas
                 };
 
-                const excludedFields = ['vectorNamespace', 'companyId', 'parsedText', 'is_base64', 'content', 'content_type', 'action', 'table', 'created_at', 'updated_at'];
+                const excludedFields = ['vectorNamespace', 'companyId', 'is_base64', 'content', 'content_type', 'action', 'table', 'created_at', 'updated_at', 'storage_path', 'user_id'];
 
                 for (const [key, value] of Object.entries(metadata)) {
                     if (!excludedFields.includes(key) && value !== undefined && value !== null && value !== "") {
@@ -277,7 +284,6 @@ Deno.serve(async (req) => {
             const now = new Date().toISOString();
             const data: Record<string, any> = {
                 created_at: now,
-                updated_at: now,
             };
             const globalExcluded = ['scanMode', 'companyId', 'created_at', 'updated_at'];
 
@@ -294,10 +300,7 @@ Deno.serve(async (req) => {
         } else if (action === "update") {
             const { id, action: _upd, table: __upd, ...updRawData } = body;
 
-            const now = new Date().toISOString();
-            const data: Record<string, any> = {
-                updated_at: now,
-            };
+            const data: Record<string, any> = {};
             const globalExcluded = ['scanMode', 'companyId', 'created_at', 'updated_at'];
 
             for (const [key, value] of Object.entries(updRawData)) {

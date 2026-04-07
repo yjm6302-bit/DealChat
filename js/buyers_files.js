@@ -62,7 +62,7 @@ $(document).ready(function () {
         { field: "file_name", headerName: "파일명", sortable: true, filter: false, flex: 1.5 },
         {
             field: "companyId",
-            headerName: "바이어명",
+            headerName: "매수자명",
             sortable: true,
             filter: false,
             flex: 1,
@@ -79,11 +79,7 @@ $(document).ready(function () {
             headerName: "수정일",
             sortable: true,
             flex: 0.8,
-            valueFormatter: params => params.value ? new Date(params.value).toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }) : ""
+            valueFormatter: params => { if (!params.value) return ""; const d = new Date(params.value); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; }
         },
         {
             headerName: "다운로드",
@@ -176,8 +172,8 @@ $(document).ready(function () {
         $('#modal-summary').val(file.summary || '');
         $('#modal-tags').val(file.tags || '');
         $('#modal-comments').val(file.comments || '');
-        $('#modal-createdAt').val(file.created_at ? new Date(file.created_at).toLocaleString() : '');
-        $('#modal-updatedAt').val(file.updated_at ? new Date(file.updated_at).toLocaleString() : '');
+        $('#modal-createdAt').val(file.created_at ? (d => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`)(new Date(file.created_at)) : '');
+        $('#modal-updatedAt').val(file.updated_at ? (d => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`)(new Date(file.updated_at)) : '');
 
         const supabaseUrl = window.config.supabase.url;
         const fileUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${file.location}`;
@@ -207,7 +203,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Summary Error:', error);
-            alert('요약 생성 중 오류가 발생했습니다.');
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('요약 생성 중 오류가 발생했습니다.');
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }
@@ -232,7 +233,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Tags Error:', error);
-            alert('태그 생성 중 오류가 발생했습니다.');
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('태그 생성 중 오류가 발생했습니다.');
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }

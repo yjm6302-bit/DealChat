@@ -102,6 +102,18 @@
                     display: none;
                     flex-shrink: 0;
                 }
+                .shared-count-badge {
+                    background: #ef4444 !important;
+                    color: #fff !important;
+                    font-size: 11px !important;
+                    font-weight: 700 !important;
+                    padding: 2px 8px !important;
+                    border-radius: 20px !important;
+                    margin-left: auto !important;
+                    display: none;
+                    line-height: 1 !important;
+                    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+                }
                 /* Systemic Unification: Bootstrap overrides */
                 .layout-navbar {
                     min-height: 80px !important;
@@ -156,22 +168,43 @@
                                 </div>
                                 
                                 <!-- Dropdown Menu (Moved outside trigger) -->
-                                <div class="user-menu-dropdown" id="user-menu-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 220px; padding: 8px; z-index: 9999; border: 1px solid #e2e8f0; opacity: 0; transform: translateY(10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; margin-top: 10px;">
-                                    <a href="${ndaPath}" class="user-menu-item" style="padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 14px; transition: background 0.2s;">
-                                        <span class="material-symbols-outlined" style="font-size: 20px;">history</span>
-                                        열람기록
-                                    </a>
-                                    <a href="${myPagePath}" class="user-menu-item" style="padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 14px; transition: background 0.2s;">
-                                        <span class="material-symbols-outlined" style="font-size: 20px;">person</span>
-                                        마이페이지
-                                    </a>
-                                    <a href="${qnaPath}" class="user-menu-item" style="padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 14px; transition: background 0.2s;">
-                                        <span class="material-symbols-outlined" style="font-size: 20px;">quiz</span>
-                                        문의하기
-                                    </a>
-                                    <div class="user-menu-item" id="btn-signout" style="padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #475569; border-top: 1px solid #f1f5f9; margin-top: 5px; cursor: pointer; border-radius: 8px; font-size: 14px; transition: background 0.2s;">
-                                        <span class="material-symbols-outlined" style="font-size: 20px;">logout</span>
-                                        <span style="font-weight: 500;">로그아웃</span>
+                                <div class="user-menu-dropdown" id="user-menu-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(15,23,42,0.12), 0 2px 8px rgba(15,23,42,0.06); width: 240px; padding: 0; z-index: 9999; border: 1px solid #e2e8f0; opacity: 0; transform: translateY(10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; margin-top: 10px; overflow: hidden;">
+                                    <!-- 메뉴 본체 -->
+                                    <div style="padding: 12px 8px;">
+                                        <!-- 섹션 1: 관리 도구 (향후 운영자 전용 예정) -->
+                                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">관리 도구</div>
+                                        
+                                                        <a href="${isSubPage ? 'shared_items.html' : 'html/shared_items.html'}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">share</span>
+                                            <span style="flex: 1;">공유목록</span>
+                                            <span class="shared-count-badge" id="shared-count-badge">0</span>
+                                        </a>
+
+                                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
+
+                                        <!-- 섹션 2: 내 활동 -->
+                                        <div style="padding: 4px 10px 8px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">내 활동</div>
+                                        
+                                        <a href="${myPagePath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">manage_accounts</span>
+                                            <span>마이페이지</span>
+                                        </a>
+                                        <a href="${ndaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">history</span>
+                                            <span>열람기록</span>
+                                        </a>
+                                        <a href="${qnaPath}" class="user-menu-item" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 13.5px; transition: background 0.15s;">
+                                            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">help_outline</span>
+                                            <span>문의하기</span>
+                                        </a>
+
+                                        <div style="height: 1px; background: #f1f5f9; margin: 8px 2px;"></div>
+
+                                        <!-- 섹션 3: 세션 -->
+                                        <div class="user-menu-item" id="btn-signout" style="padding: 9px 10px; display: flex; align-items: center; gap: 10px; color: #ef4444; border-radius: 8px; font-size: 13.5px; transition: background 0.15s; cursor: pointer;">
+                                            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+                                            <span style="font-weight: 600;">로그아웃</span>
+                                        </div>
                                     </div>
                                 </div>
                             </li>
@@ -215,8 +248,8 @@
                                     return;
                                 }
 
-                                // 세션이 유효한 경우에만 알림 업데이트 (비활성화)
-                                // updateUnreadStatus(userData);
+                                // 세션이 유효한 경우에만 알림 업데이트
+                                updateUnreadStatus(userData);
                             }
                         }
                 } catch (err) {
@@ -245,28 +278,21 @@
 
             if (rError) throw rError;
 
-            // 2. 발신한 공유 중 상대방이 읽지 않은 항목 (발신 대기)
-            const { count: sentCount, error: sError } = await _supabase
-                .from('shares')
-                .select('*', { count: 'exact', head: true })
-                .eq('sender_id', userData.id)
-                .eq('is_read', false)
-                .eq('sender_deleted', false);
-
-            if (sError) throw sError;
-
-            const totalUnread = (receivedCount || 0) + (sentCount || 0);
+            const totalUnread = receivedCount || 0;
 
             if (totalUnread > 0) {
                 const dot1 = document.getElementById('shared-unread-dot');
-                const dot2 = document.getElementById('shared-menu-unread-dot');
+                const badge = document.getElementById('shared-count-badge');
                 if (dot1) dot1.style.display = 'block';
-                if (dot2) dot2.style.display = 'block';
+                if (badge) {
+                    badge.textContent = totalUnread;
+                    badge.style.display = 'inline-block';
+                }
             } else {
                 const dot1 = document.getElementById('shared-unread-dot');
-                const dot2 = document.getElementById('shared-menu-unread-dot');
+                const badge = document.getElementById('shared-count-badge');
                 if (dot1) dot1.style.display = 'none';
-                if (dot2) dot2.style.display = 'none';
+                if (badge) badge.style.display = 'none';
             }
         } catch (err) {
             console.error('Failed to update unread status in header:', err);

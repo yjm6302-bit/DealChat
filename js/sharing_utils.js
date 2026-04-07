@@ -181,8 +181,12 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
 
         let userData = null;
         try {
-            const id = itemType === 'buyer' ? window.currentShareBuyerId : window.currentShareSellerId;
-            if (!id) throw new Error('대상을 찾을 수 없습니다. (ID 미지정)');
+        let id = null;
+        if (itemType === 'buyer') id = window.currentShareBuyerId;
+        else if (itemType === 'seller') id = window.currentShareSellerId;
+        else if (itemType === 'company') id = window.currentShareCompanyId;
+
+        if (!id) throw new Error('대상을 찾을 수 없습니다. (ID 미지정)');
 
             // Get logged in user data from local storage
             try {
@@ -222,7 +226,11 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
 
             // Format Guidance Template
             const expiry = new Date(savedLog.expires_at);
-            const dateStr = expiry.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+            const mm = String(expiry.getMonth() + 1).padStart(2, '0');
+            const dd = String(expiry.getDate()).padStart(2, '0');
+            const hh = String(expiry.getHours()).padStart(2, '0');
+            const min = String(expiry.getMinutes()).padStart(2, '0');
+            const dateStr = `${expiry.getFullYear()}.${mm}.${dd} ${hh}:${min}`;
             
             const template = `안녕하세요, ${sharerInfo.affiliation} ${sharerInfo.name}입니다.\n\n아래 링크를 통해 리포트를 확인하실 수 있습니다.\n공유 URL: ${shareUrl}\n접근 키: ${shareKey}\n(최대 3회 접근 가능 / ${dateStr}까지 유효)`;
 
@@ -295,3 +303,166 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
     });
 }
 
+
+/**
+ * Check if NDA is signed for the current user and item
+ */
+export async function checkNdaStatus(supabase, itemId, userId, itemType) {
+    // 1. Check LocalStorage (External use/fallback)
+    try {
+        const localUserId = userId || 'anonymous';
+        const signed = localStorage.getItem(`dealchat_signed_ndas_${itemType}s_${localUserId}`);
+        const localSignedList = signed ? JSON.parse(signed) : [];
+        if (localSignedList.includes(String(itemId))) return true;
+    } catch (e) {
+        console.warn('LocalStorage NDA check failed:', e);
+    }
+
+    // 2. Check Supabase nda_logs (Member use)
+    if (userId) {
+        const { data, error } = await supabase
+            .from('nda_logs')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('item_id', itemId)
+            .eq('item_type', itemType)
+            .maybeSingle();
+        
+        if (data && !error) return true;
+    }
+
+    return false;
+}
+
+/**
+ * Initialize and show NDA Gate Modal
+ */
+export function initNdaGate(supabase, itemId, itemType, userData, options = {}) {
+    const { 
+        fromSource = '', 
+        returnUrl = './index.html',
+        onSuccess = () => location.reload()
+    } = options;
+
+    const currentUserName = userData?.name || userData?.email?.split('@')[0] || '사용자';
+    const isExternal = fromSource === 'shared' && !userData?.isLoggedIn;
+    let guestName = null;
+
+    $('#logged-in-user-name').text(currentUserName);
+    
+    const ndaModalEl = document.getElementById('nda-modal');
+    if (!ndaModalEl) {
+        console.error('NDA Modal element not found in HTML');
+        return;
+    }
+
+    const ndaModal = bootstrap.Modal.getOrCreateInstance(ndaModalEl, {
+        backdrop: 'static',
+        keyboard: false
+    });
+
+    // Reset UI
+    $('#nda-signature-name').val('');
+    $('#nda-confirmation-text').val('');
+    $('#nda-access-key').val('');
+    $('#btn-confirm-nda').prop('disabled', true).css('opacity', '0.5');
+
+    const $accessKeySection = $('#nda-access-key-section');
+    if (isExternal) {
+        $accessKeySection.show();
+        $('#nda-name-hint').text('* 전달받은 6자리 접근 키를 입력해주세요.');
+    } else {
+        $accessKeySection.hide();
+        $('#nda-name-hint').html(`* <strong style="color: #6366f1;">${currentUserName}</strong> 님의 성함을 입력해주세요.`);
+    }
+
+    const validateInputs = () => {
+        const signature = $('#nda-signature-name').val().trim();
+        const confirmTxt = $('#nda-confirmation-text').val().trim();
+        const REQUIRED_TXT = "위 사항을 위반하지 않을 것을 약속합니다";
+        
+        let isValid = false;
+        if (isExternal) {
+            const accessKey = $('#nda-access-key').val().trim();
+            isValid = (signature === (guestName || '') && confirmTxt === REQUIRED_TXT && accessKey.length >= 6);
+        } else {
+            isValid = (signature === currentUserName && confirmTxt === REQUIRED_TXT);
+        }
+
+        const $confirmBtn = $('#btn-confirm-nda');
+        $confirmBtn.prop('disabled', !isValid).css('opacity', isValid ? '1' : '0.5');
+    };
+
+    $('#nda-signature-name, #nda-confirmation-text').off('input').on('input', validateInputs);
+
+    if (isExternal) {
+        $('#nda-access-key').off('input').on('input', async function() {
+            const key = $(this).val().trim();
+            if (key.length >= 6) {
+                const shareLog = await validateShareKey(supabase, itemId, key);
+                if (shareLog) {
+                    guestName = shareLog.recipient_name;
+                    $('#logged-in-user-name').text(guestName).css('color', '#0d9488');
+                    $('#nda-name-hint').html(`* <strong style="color: #0d9488;">${guestName}</strong> 님의 성함을 입력해주세요.`);
+                    $(this).css('border-color', '#10b981');
+                } else {
+                    guestName = null;
+                    $('#logged-in-user-name').text('사용자').css('color', '#8b5cf6');
+                    $('#nda-name-hint').html(`* 유효하지 않은 키이거나 접근 횟수를 초과했습니다.`);
+                    $(this).css('border-color', '#ef4444');
+                }
+            } else {
+                guestName = null;
+                $('#nda-name-hint').text('* 전달받은 6자리 접근 키를 입력해주세요.');
+                $(this).css('border-color', '#f1f5f9');
+            }
+            validateInputs();
+        });
+    }
+
+    $('#btn-confirm-nda').off('click').on('click', async () => {
+        const signature = $('#nda-signature-name').val().trim();
+        
+        if (isExternal) {
+            const accessKey = $('#nda-access-key').val().trim();
+            const shareLog = await validateShareKey(supabase, itemId, accessKey);
+            if (!shareLog) {
+                alert('유효하지 않거나 만료된 접근 키입니다.');
+                return;
+            }
+            await logExternalAccess(supabase, shareLog.id);
+        }
+
+        try {
+            if (userData && userData.isLoggedIn) {
+                await supabase.from('nda_logs').insert({
+                    user_id: userData.id,
+                    item_id: itemId,
+                    item_type: itemType,
+                    signature: signature
+                });
+            }
+            
+            // Save to LocalStorage
+            const localUserId = userData?.id || 'anonymous';
+            const signed = localStorage.getItem(`dealchat_signed_ndas_${itemType}s_${localUserId}`);
+            const list = signed ? JSON.parse(signed) : [];
+            if (!list.includes(String(itemId))) {
+                list.push(String(itemId));
+                localStorage.setItem(`dealchat_signed_ndas_${itemType}s_${localUserId}`, JSON.stringify(list));
+            }
+
+            ndaModal.hide();
+            onSuccess();
+        } catch (e) {
+            console.error('NDA sign error:', e);
+            alert('NDA 체결 중 오류가 발생했습니다.');
+        }
+    });
+
+    $('#nda-modal-cancel-btn').off('click').on('click', () => {
+        location.href = returnUrl;
+    });
+
+    ndaModal.show();
+}

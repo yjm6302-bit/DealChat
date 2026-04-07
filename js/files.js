@@ -82,11 +82,11 @@ $(document).ready(function () {
             headerName: "수정일",
             sortable: true,
             flex: 0.8,
-            valueFormatter: params => params.value ? new Date(params.value).toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }) : ""
+            valueFormatter: params => {
+                if (!params.value) return "";
+                const d = new Date(params.value);
+                return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+            }
         },
         {
             headerName: "다운로드",
@@ -161,8 +161,22 @@ $(document).ready(function () {
         $('#modal-summary').val(file.summary || '');
         $('#modal-tags').val(file.tags || '');
         $('#modal-comments').val(file.comments || '');
-        $('#modal-createdAt').val(file.created_at ? new Date(file.created_at).toLocaleString() : '');
-        $('#modal-updatedAt').val(file.updated_at ? new Date(file.updated_at).toLocaleString() : '');
+        if (file.created_at) {
+            const d = new Date(file.created_at);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            $('#modal-createdAt').val(`${d.getFullYear()}.${mm}.${dd} ${hh}:${min}`);
+        }
+        if (file.updated_at) {
+            const d = new Date(file.updated_at);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            $('#modal-updatedAt').val(`${d.getFullYear()}.${mm}.${dd} ${hh}:${min}`);
+        }
 
         const fileUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${location}`;
         $('#modal-location-icon').attr('href', fileUrl);
@@ -226,7 +240,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Summary Error:', error);
-            alert('요약 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('요약 생성 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 오류'));
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }
@@ -260,7 +279,12 @@ $(document).ready(function () {
             }
         } catch (error) {
             console.error('AI Tags Error:', error);
-            alert('태그 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('태그 생성 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 오류'));
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }
@@ -285,7 +309,12 @@ $(document).ready(function () {
             $('#upload-summary').val(data.answer.trim());
         } catch (error) {
             console.error('AI Upload Summary Error:', error);
-            alert('요약 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('요약 생성 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 오류'));
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }
@@ -311,7 +340,12 @@ $(document).ready(function () {
             $('#upload-tags').val(cleanTags);
         } catch (error) {
             console.error('AI Upload Tags Error:', error);
-            alert('태그 생성 중 오류가 발생했습니다: ' + error.message);
+            const errMsg = error.message || '';
+            if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+                alert('⚠️ AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (무료 플랜 기준 분당/일일 한도 초과)');
+            } else {
+                alert('태그 생성 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 오류'));
+            }
         } finally {
             $btn.prop('disabled', false).html(originalIcon);
         }

@@ -25,18 +25,15 @@ window.config = {
     aiHandlerUrl: 'https://afitwguexwihnepyutqw.supabase.co/functions/v1/ai-handler'
   },
   ai: {
-    model: 'gpt-5-mini', // Current model in use (best cost-performance)
+    model: 'gemini-3.1-flash-live-preview', 
     tokenLimits: {
-      'gpt-5-mini': {
-        maxContextTokens: 400000,
-        maxOutputTokens: 128000,
-        safetyMargin: 5000
-      },
-      'gpt-5-nano': {
-        maxContextTokens: 400000,
-        maxOutputTokens: 128000,
-        safetyMargin: 5000
-      }
+      'gemini-3.1-flash-live-preview': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-3.1-pro': { maxContextTokens: 2000000, maxOutputTokens: 8192, safetyMargin: 2000 },
+      'gemini-3.1-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-2.5-pro': { maxContextTokens: 2000000, maxOutputTokens: 8192, safetyMargin: 2000 },
+      'gemini-2.5-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-2.5-flash-lite': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-2.0-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 }
     }
   }
 };

@@ -14,21 +14,22 @@ serve(async (req) => {
 
     try {
         const body = await req.json();
-        // 하위 호환성 유지: body.body가 있으면 prompts로 간주, 아니면 action 기반 처리
+        // 동적 모델 선택 지원: body.model이 있으면 사용, 없으면 기본값 설정
+        const model = body.model || "gemini-1.5-flash";
         const prompts = body.body || body.prompts;
         const action = body.action;
 
-        const apiKey = Deno.env.get("OPENAI_API_KEY");
+        const apiKey = Deno.env.get("GEMINI_API_KEY");
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
         if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
-            throw new Error("Missing Environment Variables");
+            throw new Error("Missing Environment Variables (GEMINI_API_KEY, SUPABASE_URL, or SUPABASE_SERVICE_ROLE_KEY)");
         }
 
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        // 1. Vector Search Action
+        // 1. Vector Search Action (Gemini Embedding)
         if (action === 'search_vector') {
             const query = body.query;
             const vectorNamespace = body.vectorNamespace;
@@ -36,30 +37,30 @@ serve(async (req) => {
 
             if (!query) throw new Error("Missing query for vector search");
 
-            // 1-1. Generate Embedding
-            const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+            // 1-1. Generate Gemini Embedding
+            const embeddingResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`, {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${apiKey}`,
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "text-embedding-3-small",
-                    input: query,
+                    content: {
+                        parts: [{ text: query }]
+                    }
                 }),
             });
+            
             const embeddingData = await embeddingResponse.json();
 
-            if (!embeddingData.data || !embeddingData.data[0]) {
-                throw new Error("Failed to generate embedding: " + JSON.stringify(embeddingData));
+            if (!embeddingData.embedding || !embeddingData.embedding.values) {
+                throw new Error("Failed to generate Gemini embedding: " + JSON.stringify(embeddingData));
             }
-            const queryEmbedding = embeddingData.data[0].embedding;
+            const queryEmbedding = embeddingData.embedding.values;
 
             // 1-2. Search in Supabase (RPC call)
-            // match_documents 함수는 Supabase SQL Editor에서 미리 정의되어 있어야 함
             const { data: documents, error } = await supabase.rpc('match_documents', {
                 query_embedding: queryEmbedding,
-                match_threshold: 0.3, // 유사도 임계값 완화 (0.5 -> 0.3)
+                match_threshold: 0.3,
                 match_count: topK,
                 filter: vectorNamespace ? { company_id: vectorNamespace } : {}
             });
@@ -74,34 +75,48 @@ serve(async (req) => {
             });
         }
 
-        // 2. Default: Chat Completion (Existing Logic)
-        const userPrompt = prompts || body.query || ""; // Fallback
+        // 2. Default: Chat Completion (Dynamic Model Loading)
+        const userPrompt = prompts || body.query || "";
 
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        // URL 파라미터에 선택된 모델명을 동적으로 반영
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "gpt-5-nano",
-                messages: [
-                    { role: "system", content: "You are a professional assistant." },
-                    { role: "user", content: userPrompt }
+                contents: [
+                    {
+                        role: "user",
+                        parts: [{ text: userPrompt }]
+                    }
                 ],
+                generationConfig: {
+                    temperature: 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 4096, // Increased from 2048 to prevent truncation
+                },
+                safetySettings: [
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                ]
             }),
         });
 
         const data = await response.json();
 
         if (data.error) {
-            return new Response(JSON.stringify({ error: data.error, model_used: "gpt-5-nano" }), {
+            return new Response(JSON.stringify({ error: data.error, model_used: model }), {
                 status: response.status,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        const answer = data.choices?.[0]?.message?.content || "No response generated.";
+        // Gemini response parsing: candidates[0].content.parts[0].text
+        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
 
         return new Response(JSON.stringify({ answer }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

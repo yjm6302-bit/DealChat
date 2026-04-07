@@ -32,18 +32,24 @@ CREATE INDEX IF NOT EXISTS idx_external_share_logs_item_id ON public.external_sh
 CREATE INDEX IF NOT EXISTS idx_external_share_logs_share_key ON public.external_share_logs(share_key);
 CREATE INDEX IF NOT EXISTS idx_external_share_access_share_id ON public.external_share_access_logs(share_id);
 
--- 4. RLS 설정 (필요에 따라)
+-- 4. RLS 설정
 ALTER TABLE public.external_share_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.external_share_access_logs ENABLE ROW LEVEL SECURITY;
 
--- 모든 사용자(비회원 포함)가 share_key로 조회 가능하도록 허용
+-- external_share_logs 정책
+-- 비회원 포함 모든 사용자가 share_key로 조회 가능 (외부 공유 키 인증에 필요)
 CREATE POLICY "Allow public read by key" ON public.external_share_logs
     FOR SELECT USING (true);
 
+-- 인증된 사용자는 자신의 공유 로그를 생성 가능
+CREATE POLICY "Users can insert their own share logs" ON public.external_share_logs
+    FOR INSERT WITH CHECK (auth.uid() = sender_id);
+
+-- 비회원 포함 모든 사용자가 access_count 업데이트 가능 (3회 접근 제한 동작에 필요)
+CREATE POLICY "Allow public update access count" ON public.external_share_logs
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+-- external_share_access_logs 정책
 -- 모든 사용자가 접근 로그를 남길 수 있도록 허용
 CREATE POLICY "Allow public insert access log" ON public.external_share_access_logs
     FOR INSERT WITH CHECK (true);
-
--- 인증된 사용자는 자신의 공유 로그를 생성 가능
-CREATE POLICY "Allow auth users to insert share logs" ON public.external_share_logs
-    FOR INSERT WITH CHECK (auth.uid() = sender_id);

@@ -25,15 +25,12 @@ window.config = {
     aiHandlerUrl: 'https://afitwguexwihnepyutqw.supabase.co/functions/v1/ai-handler'
   },
   ai: {
-    model: 'gemini-3.1-flash-live-preview', 
+    model: 'gemini-2.0-flash', 
     tokenLimits: {
-      'gemini-3.1-flash-live-preview': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
-      'gemini-3.1-pro': { maxContextTokens: 2000000, maxOutputTokens: 8192, safetyMargin: 2000 },
-      'gemini-3.1-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
-      'gemini-2.5-pro': { maxContextTokens: 2000000, maxOutputTokens: 8192, safetyMargin: 2000 },
-      'gemini-2.5-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
-      'gemini-2.5-flash-lite': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
-      'gemini-2.0-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 }
+      'gemini-2.0-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-1.5-pro': { maxContextTokens: 2000000, maxOutputTokens: 8192, safetyMargin: 2000 },
+      'gemini-1.5-flash': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 },
+      'gemini-1.5-flash-8b': { maxContextTokens: 1000000, maxOutputTokens: 8192, safetyMargin: 1000 }
     }
   }
 };

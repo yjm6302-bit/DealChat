@@ -5,6 +5,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import * as sharingUtils from './sharing_utils.js';
 import { escapeForDisplay, tryRepairJson } from './utils.js';
 import { initModelSelector } from './model_selector.js';
+import { applyReportMode } from './dealbook_report_utils.js';
 
 
 // 프로필 모달 스크립트 로드
@@ -94,7 +95,7 @@ $(document).ready(function () {
     // ==========================================
     // AI 모델 선택기
     // ==========================================
-    const { markModelAsExceeded } = initModelSelector(addAiResponse);
+    const { markModelAsExceeded, getCurrentModelId } = initModelSelector(addAiResponse);
     
 
     // 기업 정보 파싱 함수
@@ -794,7 +795,7 @@ $(document).ready(function () {
             
             const rag = ragContexts.join("\n\n---\n\n");
             const ctx = `[매도인 정보]\n기업명: ${$('#seller-name-editor').text()}\n산업: ${$('#seller-industry').val()}\n대표자: ${$('#seller-ceo').val()}\n소개: ${$('#seller-summary').val()}\n[참고 문서 내용]\n${rag}`;
-            const res = await addAiResponse(msg, ctx, currentModelId);
+            const res = await addAiResponse(msg, ctx, getCurrentModelId());
             const data = await res.json();
             const reply = data.answer || '답변 실패';
             $aiP.find('.ai-typing').html(escapeForDisplay(reply));
@@ -803,7 +804,7 @@ $(document).ready(function () {
         } catch (e) { 
             console.error('AI Chat Error:', e);
             if (e.message.includes('429') || (e.message.includes('RESOURCE_EXHAUSTED'))) {
-                markModelAsExceeded(currentModelId);
+                markModelAsExceeded(getCurrentModelId());
                 $aiP.find('.ai-typing').html('현재 모델의 사용 한도가 초과되었습니다.<br>다른 모델로 변경하여 시도해 주세요.');
             } else {
                 $aiP.find('.ai-typing').text('오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'); 
@@ -881,7 +882,7 @@ $(document).ready(function () {
 4. 반드시 유효한 JSON 형식으로만 답변하세요. 다른 설명은 생략하세요.
             `.trim();
 
-            const res = await addAiResponse(prompt, ctx, currentModelId);
+            const res = await addAiResponse(prompt, ctx, getCurrentModelId());
             const data = await res.json();
             
             let resultText = data.answer || data.text || "";
@@ -968,31 +969,17 @@ $(document).ready(function () {
     }
 
     function applySellerReadOnlyMode() {
-        const primary = '#8b5cf6';
-        const styles = `:root { --report-primary: ${primary}; --report-bg: #fff; --report-text: #475569; --report-border: #e2e8f0; }
-            body { background: #f8fafc !important; overflow-y: auto !important; height: auto !important; }
-            .app-container { display: block !important; padding: 60px 0 !important; height: auto !important; }
-            .sidebar { width: 900px !important; max-width: 95% !important; margin: 0 auto !important; background: #fff !important; border: 1px solid var(--report-border) !important; border-radius: 20px !important; height: auto !important; overflow: visible !important; box-shadow: 0 12px 48px rgba(139,92,246,0.08) !important; }
-            .sidebar .panel-header { background: var(--report-primary) !important; color: #fff !important; border-radius: 19px 19px 0 0 !important; height: 65px !important; display: flex !important; align-items: center; justify-content: center; }
-            .sidebar-nav { padding: 40px !important; display: flex !important; flex-direction: column !important; gap: 32px !important; height: auto !important; }
-            .report-text-content { font-size: 14px; color: var(--report-text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-            input:disabled, select:disabled { border: none !important; background: transparent !important; color: var(--report-text) !important; cursor: default !important; font-size: 14px !important; font-weight: 500 !important; height: 42px !important; -webkit-text-fill-color: var(--report-text) !important; }
-            textarea:disabled, .main-content, #guide-panel, .right-panel, .panel-resize-handle, #ai-auto-fill-btn, #btn-save-seller, #btn-draft-seller, #btn-delete-seller, #add-financial-btn, .btn-remove-row, .delete-file, .blind-check-container, #blind-keywords-container, #blind-mode-toggle-container { display: none !important; }
-            .report-table-header { background: #f8fafc !important; border-radius: 8px !important; border-top: 1.5px solid var(--report-primary) !important; border-bottom: 1.5px solid var(--report-primary) !important; }
-            .report-table-row { display: flex !important; border-bottom: 1px solid #f1f5f9 !important; }
-            .report-table-cell { padding: 12px 10px !important; font-size: 13.5px !important; flex: 1; display: flex !important; align-items: center; }
-        `;
-        if (!$('#report-mode-css').length) $('<style id="report-mode-css">').text(styles).appendTo('head');
-        
-        ['#seller-summary', '#seller-key-products', '#seller-fin-analysis', '#seller-memo', '#seller-manager-memo'].forEach(sel => {
-            const $ta = $(sel); if (!$ta.length) return;
-            const $div = $('<div class="report-text-content">').text($ta.val()); $ta.after($div).hide();
+        applyReportMode({
+            primaryColor: '#8b5cf6',
+            cardWidth: '900px',
+            hideSelectors: '#ai-auto-fill-btn, #btn-save-seller, #btn-draft-seller, #btn-delete-seller, #add-financial-btn, .btn-remove-row, .delete-file, #blind-keywords-container',
+            textareaIds: ['seller-summary', 'seller-key-products', 'seller-fin-analysis', 'seller-memo', 'seller-manager-memo'],
+            afterApply: () => {
+                reformatSellerFinancialTable();
+                injectSellerReportIcons();
+                if ($('#report-mode-css').length) applyBlindMasking();
+            }
         });
-        
-        $('input, select, textarea').prop('disabled', true);
-        $('#seller-name-editor').attr('contenteditable', 'false').parent().css({'background':'transparent','border':'none'});
-        reformatSellerFinancialTable();
-        injectSellerReportIcons();
     }
 
     function reformatSellerFinancialTable() {

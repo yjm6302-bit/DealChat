@@ -2,6 +2,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
 import { debounce, escapeHtml } from './utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 // 프로필 모달 스크립트 로드
 const script = document.createElement('script');
@@ -220,7 +221,6 @@ function loadInitialData() {
         
         updateFilterOptions();
         applyFilters();
-        renderPagination();
     }).catch(error => {
         console.error('Initial Load Error:', error);
         $('#buyer-list-container').html('<tr><td colspan="8" class="text-center py-5 text-danger">데이터를 불러오는 중 오류가 발생했습니다. (' + (error.message || '알 수 없는 오류') + ')</td></tr>');
@@ -299,7 +299,6 @@ function loadBuyers() {
             }) : [];
             updateFilterOptions();
             applyFilters();
-            renderPagination();
         })
         .catch(error => {
             console.error('Reload Error:', error);
@@ -695,42 +694,6 @@ $(document).on('click', '#btn-submit-share', function () {
 
 
 
-// ==========================================
-// Pagination
-// ==========================================
-
-function renderPagination() {
-    const container = $('#pagination-container');
-    container.empty();
-    const totalPages = Math.ceil(filteredBuyers.length / itemsPerPage);
-    if (totalPages <= 1) return;
-
-    const prevDisabled = currentPage === 1 ? 'disabled' : '';
-    container.append(`<button class="btn btn-outline-light pagination-btn" ${prevDisabled} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
-    container.append(`<button class="btn btn-outline-light pagination-btn" ${prevDisabled} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
-
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
-    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-
-    for (let i = startPage; i <= endPage; i++) {
-        const activeClass = i === currentPage ? 'active' : '';
-        container.append(`<button class="btn btn-outline-light pagination-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`);
-    }
-
-    const nextDisabled = currentPage === totalPages ? 'disabled' : '';
-    container.append(`<button class="btn btn-outline-light pagination-btn" ${nextDisabled} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
-    container.append(`<button class="btn btn-outline-light pagination-btn" ${nextDisabled} onclick="changePage(${totalPages})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
-}
-
-window.changePage = function (page) {
-    const totalPages = Math.ceil(filteredBuyers.length / itemsPerPage);
-    if (page < 1 || page > totalPages) return;
-    currentPage = page;
-    renderBuyers();
-    renderPagination();
-    document.querySelector('.search-and-actions').scrollIntoView({ behavior: 'smooth' });
-};
 
 // ==========================================
 // Filters & Sort
@@ -795,7 +758,16 @@ function applyFilters() {
     applySort(currentSort, false);
     currentPage = 1;
     renderBuyers();
-    renderPagination();
+    renderPagination({
+        totalItems: filteredBuyers.length,
+        itemsPerPage: itemsPerPage,
+        currentPage: currentPage,
+        onPageChange: (p) => {
+            currentPage = p;
+            renderBuyers();
+        },
+        scrollToSelector: '.search-and-actions'
+    });
 }
 
 function applySort(type, shouldRender = true) {
@@ -816,7 +788,16 @@ function applySort(type, shouldRender = true) {
     if (shouldRender) {
         currentPage = 1;
         renderBuyers();
-        renderPagination();
+        renderPagination({
+            totalItems: filteredBuyers.length,
+            itemsPerPage: itemsPerPage,
+            currentPage: currentPage,
+            onPageChange: (p) => {
+                currentPage = p;
+                renderBuyers();
+            },
+            scrollToSelector: '.search-and-actions'
+        });
     }
 }
 

@@ -2,6 +2,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
 import { escapeHtml } from './utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 // 수파베이스 클라이언트 초기화 통합
 const _supabase = window.supabaseClient || supabase.createClient(window.config.supabase.url, window.config.supabase.anonKey);
@@ -421,35 +422,6 @@ $(document).on('click', '#btn-submit-share', function () {
     submitShare(window.currentShareCompanyId, this);
 });
 
-function renderPagination() {
-    const $container = $('#pagination-container').empty();
-    const total = Math.ceil(filteredCompanies.length / itemsPerPage);
-    if (total < 1) return; // 0페이지인 경우만 숨김 (1페이지부터 표시)
-
-    const prevD = currentPage === 1 ? 'disabled' : '';
-    const nextD = currentPage === total ? 'disabled' : '';
-    
-    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
-    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
-    
-    let start = Math.max(1, currentPage - 2);
-    let end = Math.min(total, start + 4);
-    if (end - start < 4) start = Math.max(1, end - 4);
-    
-    for (let i = start; i <= end; i++) {
-        const activeClass = i === currentPage ? 'active' : '';
-        $container.append(`<button class="pg-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`);
-    }
-    
-    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
-    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${total})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
-}
-
-window.changePage = function (p) {
-    currentPage = p;
-    renderCompanies();
-    renderPagination();
-};
 
 function updateFilterOptions() {
     const $list = $('#filter-industry-list');
@@ -545,7 +517,15 @@ function applySort(type) {
     
     currentPage = 1;
     renderCompanies();
-    renderPagination();
+    renderPagination({
+        totalItems: filteredCompanies.length,
+        itemsPerPage: itemsPerPage,
+        currentPage: currentPage,
+        onPageChange: (p) => {
+            currentPage = p;
+            renderCompanies();
+        }
+    });
 }
 
 function getLatestStage(company) {

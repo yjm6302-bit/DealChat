@@ -5,6 +5,8 @@ import * as sharingUtils from './sharing_utils.js';
 import { APIcall } from './APIcallFunction.js';
 import { escapeForDisplay } from './utils.js';
 import { initModelSelector } from './model_selector.js';
+import { applyReportMode, removeReportMode } from './dealbook_report_utils.js';
+
 
 
 // 프로필 모달 스크립트 로드
@@ -43,7 +45,7 @@ $(document).ready(function () {
     // ==========================================
     // AI 모델 선택기
     // ==========================================
-    initModelSelector(addAiResponse);
+    const { markModelAsExceeded, getCurrentModelId } = initModelSelector(addAiResponse);
 
     // ==========================================
     // 초기 로드 및 인증 로직
@@ -181,7 +183,13 @@ $(document).ready(function () {
 
             await loadAvailableFiles();
 
-            if (viewMode === 'read' || fromSource === 'shared' || (!isNew && !isOwner)) {
+            if (
+                viewMode === 'read' ||
+                fromSource === 'shared' ||
+                fromSource === 'totalbuyer' ||
+                fromSource === 'total_buyers' ||
+                (!isNew && !isOwner)
+            ) {
                 switchMode('read');
             } else {
                 switchMode('edit');
@@ -349,7 +357,12 @@ $(document).ready(function () {
             alert('AI 분석이 완료되었습니다.');
         } catch (e) {
             console.error(e);
-            alert('AI 분석 중 오류가 발생했습니다.');
+            if (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED')) {
+                markModelAsExceeded(getCurrentModelId());
+                alert('⚠️ AI 요청 한도를 초과했습니다.\n해당 모델의 예약 기능이 제한되었습니다. 다른 모델을 선택해 주세요.');
+            } else {
+                alert('AI 분석 중 오류가 발생했습니다.');
+            }
         } finally {
             $btn.prop('disabled', false).html(originalHtml);
         }
@@ -375,14 +388,19 @@ $(document).ready(function () {
         const aiMessageId = `ai-msg-${Date.now()}`;
         addMessage('', 'ai', true, aiMessageId);
         try {
-            const res = await addAiResponse(text, contextText, currentModelId, conversationHistory);
+            const res = await addAiResponse(text, contextText, getCurrentModelId(), conversationHistory);
             const data = await res.json();
             const answer = data.answer || "답변을 가져올 수 없습니다.";
             const safeHtml = escapeForDisplay(answer);
             $(`#${aiMessageId}`).find('.message-content').html(safeHtml);
             conversationHistory.push({ role: 'user', content: text }, { role: 'assistant', content: answer });
         } catch (e) {
-            $(`#${aiMessageId}`).text('오류가 발생했습니다.');
+            if (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED')) {
+                markModelAsExceeded(getCurrentModelId());
+                $(`#${aiMessageId}`).find('.message-content').html('⚠️ 선택하신 AI 모델의 요청 한도가 초과되었습니다.<br>다른 모델을 선택하여 다시 질문해 주세요.');
+            } else {
+                $(`#${aiMessageId}`).text('오류가 발생했습니다.');
+            }
         }
     }
 
@@ -571,20 +589,19 @@ $(document).ready(function () {
     function switchMode(mode) {
         if (mode === 'read') applyBuyerReadOnlyMode();
         else {
-            $('#report-mode-css, #report-watermark').remove();
-            $('.sidebar, .main-content, .right-panel').show();
-            $('input, select, textarea').prop('disabled', false);
+            removeReportMode();
         }
     }
 
     function applyBuyerReadOnlyMode() {
-        const style = `<style id="report-mode-css">
-            .app-container { display: block; padding: 40px 0; background: #f8fafc; }
-            .sidebar { width: 800px; margin: 0 auto; display: block; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-            #ai-auto-fill-btn, .main-content, .right-panel, #btn-save-buyer, #btn-draft-buyer { display: none !important; }
-            textarea { display: block; border: none; background: transparent; pointer-events: none; }
-        </style>`;
-        $('head').append(style);
-        $('input, select, textarea').prop('disabled', true);
+        applyReportMode({
+            primaryColor: '#0d9488',
+            cardWidth: '900px',
+            hideSelectors: '#ai-auto-fill-btn, #btn-save-buyer, #btn-draft-buyer, #btn-delete-buyer',
+            textareaIds: ['buyer-summary', 'buyer-interest-summary', 'buyer-memo'],
+            afterApply: () => {
+                $('#memo-user-info-section').css('display', 'flex');
+            }
+        });
     }
 });

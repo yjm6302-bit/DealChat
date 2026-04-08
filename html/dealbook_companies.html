@@ -57,6 +57,46 @@
             background: rgba(0,0,0,0.7); z-index: 3000;
             display: flex; align-items: center; justify-content: center;
         }
+        /* 섹션 공통 스타일 */
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .section-title {
+            margin: 0 !important;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .material-symbols-outlined {
+            font-size: 18px;
+            color: var(--page-theme-color);
+        }
+        /* 테이블 헤더 스타일 */
+        .table-header-row {
+            display: flex;
+            gap: 8px;
+            padding: 10px 36px 10px 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            align-items: center;
+            width: 100%;
+        }
+        .table-header-cell {
+            min-width: 0;
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
     </style>
 </head>
 
@@ -245,69 +285,74 @@
                 </div>
 
                 <!-- 투자 정보 동적 폼 -->
-                <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;" id="investment-section">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">payments</span>
-                        투자 정보</p>
-                    <div style="display: flex; gap: 8px; padding: 8px 30px 8px 12px; margin-bottom: 8px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; width: 100%;">
-                        <div style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">년도</div>
-                        <div style="flex: 1.5; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">단계</div>
-                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">벨류(원)</div>
-                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">금액(원)</div>
-                        <div style="flex: 2.5; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">투자자</div>
+                <div class="sidebar-section" id="investment-section">
+                    <p class="section-title">
+                        <span class="material-symbols-outlined">payments</span>
+                        투자 정보
+                    </p>
+                    <div class="table-header-row">
+                        <div class="table-header-cell" style="flex: 1;">년도</div>
+                        <div class="table-header-cell" style="flex: 1.5;">단계</div>
+                        <div class="table-header-cell" style="flex: 2;">벨류(원)</div>
+                        <div class="table-header-cell" style="flex: 2;">금액(원)</div>
+                        <div class="table-header-cell" style="flex: 2.5;">투자자</div>
                     </div>
-                    <div id="investment-rows" style="display: flex; flex-direction: column; gap: 0; min-height: 2px;"></div>
+                    <div id="investment-rows" style="display: flex; flex-direction: column; gap: 8px;"></div>
                     <button type="button" id="add-investment-btn"
-                        style="width: 100%; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; color: #64748b; font-size: 13px; cursor: pointer; margin-top: 12px; transition: all 0.2s;">
+                        style="width: 100%; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; color: #64748b; font-size: 13px; cursor: pointer; margin-top: 4px; transition: all 0.2s;">
                         <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span>
                         투자 정보 추가
                     </button>
                 </div>
 
                 <!-- 재무 정보 동적 폼 -->
-                <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;" id="financial-section">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">analytics</span>
-                        재무 정보</p>
-                    <div style="display: flex; gap: 8px; padding: 8px 30px 8px 12px; margin-bottom: 8px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; width: 100%;">
-                        <div style="flex: 1; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">년도</div>
-                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">매출액(원)</div>
-                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">영업이익(원)</div>
-                        <div style="flex: 2; min-width: 0; font-size: 11px; color: #475569; font-weight: 700; text-align: center;">당기순익(원)</div>
+                <div class="sidebar-section" id="financial-section">
+                    <p class="section-title">
+                        <span class="material-symbols-outlined">analytics</span>
+                        재무 정보
+                    </p>
+                    <div class="table-header-row">
+                        <div class="table-header-cell" style="flex: 1;">년도</div>
+                        <div class="table-header-cell" style="flex: 2;">매출액(원)</div>
+                        <div class="table-header-cell" style="flex: 2;">영업이익(원)</div>
+                        <div class="table-header-cell" style="flex: 2;">당기순익(원)</div>
                     </div>
-                    <div id="financial-rows" style="display: flex; flex-direction: column; gap: 0; min-height: 2px;"></div>
+                    <div id="financial-rows" style="display: flex; flex-direction: column; gap: 8px;"></div>
                     <button type="button" id="add-financial-btn"
-                        style="width: 100%; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; color: #64748b; font-size: 13px; cursor: pointer; margin-top: 12px; transition: all 0.2s;">
+                        style="width: 100%; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; color: #64748b; font-size: 13px; cursor: pointer; margin-top: 4px; transition: all 0.2s;">
                         <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span>
                         재무 정보 추가
                     </button>
                 </div>
 
                 <!-- 재무분석 -->
-                <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">query_stats</span>
-                        재무분석</p>
+                <div class="sidebar-section">
+                    <p class="section-title">
+                        <span class="material-symbols-outlined">query_stats</span>
+                        재무분석
+                    </p>
                     <textarea id="financial-analysis"
                         style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #FFFFFF; color: #334155; overflow: hidden;"
                         placeholder="재무제표 분석 내용을 입력하세요..."></textarea>
                 </div>
 
                 <!-- 담당자 의견 -->
-                <div style="margin-bottom: 24px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">chat_bubble</span>
-                        담당자 의견</p>
+                <div class="sidebar-section">
+                    <p class="section-title">
+                        <span class="material-symbols-outlined">chat_bubble</span>
+                        담당자 의견
+                    </p>
                     <textarea id="manager-memo"
                         style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #FFFFFF; color: #334155; overflow: hidden;"
                         placeholder="담당자의 분석 의견을 입력하세요..."></textarea>
                 </div>
 
                 <!-- 비공개 메모 -->
-                <div class="private-memo-section" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
-                    <p style="margin: 0; font-weight: 600; font-size: 13px; color: var(--page-theme-color); display: flex; align-items: center; gap: 6px;">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
-                        비공개 메모 (작성자만 확인 가능)</p>
+                <div class="sidebar-section private-memo-section">
+                    <p class="section-title" style="color: var(--page-theme-color) !important;">
+                        <span class="material-symbols-outlined" style="color: var(--page-theme-color) !important;">lock</span>
+                        비공개 메모 (작성자만 확인 가능)
+                    </p>
                     <textarea id="private-memo"
                         style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(--page-theme-color); border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: none; background: #ffffff; color: var(--page-theme-color); overflow: hidden;"
                         placeholder="나만 볼 수 있는 비공개 메모를 입력하세요..."></textarea>

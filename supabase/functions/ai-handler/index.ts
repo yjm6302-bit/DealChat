@@ -38,7 +38,7 @@ serve(async (req) => {
             if (!query) throw new Error("Missing query for vector search");
 
             // 1-1. Generate Gemini Embedding
-            const embeddingResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`, {
+            const embeddingResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${apiKey}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -79,7 +79,7 @@ serve(async (req) => {
         const userPrompt = prompts || body.query || "";
 
         // URL 파라미터에 선택된 모델명을 동적으로 반영
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

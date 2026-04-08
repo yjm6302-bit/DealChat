@@ -5,6 +5,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, showLoader, r
 import { checkNdaStatus, initNdaGate } from './sharing_utils.js';
 import { escapeForDisplay, tryRepairJson, resolveIndustry, resolveMgmtStatus, buildFinancialString, buildInvestmentString, buildChatContext } from './utils.js';
 import { initModelSelector } from './model_selector.js';
+import { applyReportMode } from './dealbook_report_utils.js';
 
 
 // 프로필 모달 스크립트 로드
@@ -84,7 +85,7 @@ $(document).ready(function () {
     // ==========================================
     // AI 모델 선택기
     // ==========================================
-    const { markModelAsExceeded } = initModelSelector(addAiResponse);
+    const { markModelAsExceeded, getCurrentModelId } = initModelSelector(addAiResponse);
 
     // ==========================================
     // 데이터 로딩
@@ -417,17 +418,17 @@ $(document).ready(function () {
     function createFinancialRow(year = '', revenue = '', profit = '', net = '') {
         const rowId = `fin-row-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const rowHtml = `
-            <div class="financial-row" id="${rowId}" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; padding: 0 30px 0 12px; box-sizing: border-box; width: 100%;">
+            <div class="financial-row" id="${rowId}" style="display: flex; gap: 8px; align-items: center; padding: 0 36px 0 12px; box-sizing: border-box; width: 100%;">
                 <input type="text" class="fin-year" value="${year}" placeholder="연도"
-                    style="flex: 1; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: center; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 1; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: center; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <input type="text" class="fin-revenue format-number" value="${revenue}" placeholder="매출액"
-                    style="flex: 2; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 2; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <input type="text" class="fin-profit format-number" value="${profit}" placeholder="영업이익"
-                    style="flex: 2; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 2; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <input type="text" class="fin-net format-number" value="${net}" placeholder="순이익"
-                    style="flex: 2; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box;">
-                <button type="button" class="btn-remove-row" style="background: none; border: none; cursor: pointer; color: #ef4444; width: 24px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; margin-right: -24px;">
-                    <span class="material-symbols-outlined" style="font-size: 18px; font-weight: bold;">remove</span>
+                    style="flex: 2; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
+                <button type="button" class="btn-remove-row" style="background: none; border: none; cursor: pointer; color: #cbd5e1; width: 24px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; margin-right: -30px; transition: color 0.2s;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">do_not_disturb_on</span>
                 </button>
             </div>
         `;
@@ -444,19 +445,19 @@ $(document).ready(function () {
 
         const rowId = `inv-row-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const rowHtml = `
-            <div class="investment-row" id="${rowId}" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; padding: 0 30px 0 12px; box-sizing: border-box; width: 100%;">
+            <div class="investment-row" id="${rowId}" style="display: flex; gap: 8px; align-items: center; padding: 0 36px 0 12px; box-sizing: border-box; width: 100%;">
                 <input type="text" class="inv-year" value="${year}" placeholder="연도"
-                    style="flex: 1; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: center; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 1; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: center; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <select class="inv-stage"
-                    style="flex: 1.5; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; background: #ffffff; box-sizing: border-box;">${stageOptions}</select>
+                    style="flex: 1.5; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">${stageOptions}</select>
                 <input type="text" class="inv-valuation format-number" value="${valuation}" placeholder="밸류"
-                    style="flex: 2; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 2; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <input type="text" class="inv-amount format-number" value="${amount}" placeholder="금액"
-                    style="flex: 2; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box;">
+                    style="flex: 2; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: right; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
                 <input type="text" class="inv-investor" value="${investor}" placeholder="투자자"
-                    style="flex: 2.5; min-width: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; text-align: left; background: #ffffff; box-sizing: border-box;">
-                <button type="button" class="btn-remove-row" style="background: none; border: none; cursor: pointer; color: #ef4444; width: 24px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; margin-right: -24px;">
-                    <span class="material-symbols-outlined" style="font-size: 18px; font-weight: bold;">remove</span>
+                    style="flex: 2.5; min-width: 0; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; text-align: left; background: #ffffff; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
+                <button type="button" class="btn-remove-row" style="background: none; border: none; cursor: pointer; color: #cbd5e1; width: 24px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; margin-right: -30px; transition: color 0.2s;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">do_not_disturb_on</span>
                 </button>
             </div>
         `;
@@ -721,7 +722,7 @@ $(document).ready(function () {
             console.error('AI Auto-fill Error:', err);
             const errMsg = err.message || '';
             if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
-                markModelAsExceeded(currentModelId);
+                markModelAsExceeded(getCurrentModelId());
                 alert('⚠️ AI 요청 한도를 초과했습니다.\n해당 모델의 상담이 제한되었습니다. 다른 모델을 선택해 주세요.');
             } else {
                 alert('분석 중 오류가 발생했습니다: ' + (errMsg || '알 수 없는 형식'));
@@ -859,7 +860,7 @@ $(document).ready(function () {
             $typingMsg.remove();
             const errMsg = err.message || '';
             if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
-                markModelAsExceeded(currentModelId);
+                markModelAsExceeded(getCurrentModelId());
                 addMessage('⚠️ 선택하신 AI 모델의 요청 한도가 초과되었습니다. 다른 모델을 선택하여 다시 질문해 주세요.', 'ai');
             } else {
                 addMessage(`오류가 발생했습니다: ${errMsg || '알 수 없는 오류'}`, 'ai');
@@ -1043,452 +1044,17 @@ $(document).ready(function () {
     // ==========================================
     function applyReadOnlyMode() {
         console.log('Applying Professional Company Report Mode (Synced with Buyers - Blue Theme)');
-        const primaryColor = '#1A73E8'; // Company Blue
-
-        // 1. 전용 CSS 주입 (18차: 기존 스타일 복구 + 요청된 너비/테이블만 적용)
-        const reportStyles = `
-            :root {
-                --report-primary: ${primaryColor};
-                --report-bg: #ffffff;
-                --report-text: #475569;
-                --report-text-dark: #1e293b;
-                --report-border: #e2e8f0;
-                --report-table-header: #f8fafc;
-            }
-
-            body { 
-                background-color: #f8fafc !important; 
-                overflow-y: auto !important; 
-                height: auto !important; 
-            }
-
-            .app-container { 
-                background-color: #f8fafc !important; 
-                display: block !important; 
-                height: auto !important;
-                padding: 60px 0 !important;
-            }
-            
-            /* 리포트 카드 및 하단 버튼 규격 통합 관리 */
-            .sidebar, #report-share-container {
-                width: 900px !important;
-                max-width: 95% !important;
-                margin-left: auto !important;
-                margin-right: auto !important;
-                display: block !important;
-                box-sizing: border-box !important;
-            }
-
-            .sidebar {
-                background-color: var(--report-bg) !important;
-                border: 1px solid var(--report-border) !important;
-                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08) !important;
-                height: auto !important;
-                overflow: visible !important;
-                border-radius: 20px !important;
-                position: relative !important;
-                z-index: 10 !important;
-                flex: none !important;
-            }
-
-            /* 헤더 배너 */
-            .sidebar .panel-header {
-                background-color: var(--report-primary) !important;
-                color: #ffffff !important;
-                border-top-left-radius: 19px !important;
-                border-top-right-radius: 19px !important;
-                border-bottom: none !important;
-                height: 65px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border: none !important;
-                padding: 0 20px !important;
-            }
-            .sidebar .panel-header h2 { color: #ffffff !important; font-size: 16px !important; font-weight: 700 !important; }
-            .sidebar .panel-header span:not(#sidebar-header-title) { display: none !important; }
-            #sidebar-header-title { color: #ffffff !important; font-size: 16px !important; }
-            .btn-icon-only { color: #ffffff !important; }
-
-            /* 본문 영역 */
-            .sidebar-nav {
-                padding: 10px 40px 40px 40px !important;
-                overflow-y: visible !important;
-                max-height: none !important;
-                height: auto !important;
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 32px !important;
-            }
-
-            .sidebar-nav > div {
-                margin-bottom: 0 !important;
-            }
-
-            /* 테이블 반응형 컨테이너 */
-            .report-table-wrapper {
-                width: 100% !important;
-                overflow-x: auto !important;
-                -webkit-overflow-scrolling: touch !important;
-                border-radius: 0 !important;
-                border: 1px solid var(--report-border) !important;
-                margin-bottom: 8px !important;
-            }
-            .report-table-header {
-                border-radius: 0 !important;
-            }
-            .report-table-wrapper .report-table-header,
-            .report-table-wrapper .report-table-row {
-                min-width: 600px !important; /* 모바일에서 겹침 방지 및 헤더-데이터 동기화 */
-            }
-            #investment-rows, #financial-rows {
-                border: none !important; /* 상위 wrapper에서 처리 */
-            }
-
-            /* 모바일 대응 (반응형 최적화 - Edge to Edge) */
-            @media (max-width: 768px) {
-                .app-container {
-                    padding: 0 !important;
-                    background-color: #ffffff !important;
-                }
-                .sidebar {
-                    width: 100% !important;
-                    min-width: 100% !important;
-                    max-width: 100% !important;
-                    margin: 0 !important;
-                    border-radius: 0 !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                    left: 0 !important;
-                    position: relative !important;
-                }
-                .sidebar-nav {
-                    padding: 24px 16px 40px 16px !important;
-                    gap: 24px !important;
-                    width: 100% !important;
-                    box-sizing: border-box !important;
-                }
-                .sidebar .panel-header {
-                    width: 100% !important;
-                    min-width: 100% !important;
-                    height: 55px !important;
-                    border-radius: 0 !important;
-                    margin: 0 !important;
-                    left: 0 !important;
-                    position: relative !important;
-                }
-                .sidebar .panel-header h2, #sidebar-header-title {
-                    font-size: 15px !important;
-                    width: 100% !important;
-                    text-align: center !important;
-                }
-                .report-text-content {
-                    margin-bottom: 12px !important;
-                    font-size: 14px !important;
-                    line-height: 1.6 !important;
-                }
-                
-                /* 관리현황 정예화: 선택된 항목만 표시 */
-                .btn-status-chip:not(.active) {
-                    display: none !important;
-                }
-                .btn-status-chip.active {
-                    margin: 0 !important;
-                    padding: 8px 16px !important;
-                    pointer-events: none !important;
-                }
-
-                /* 모든 피드 1단(Full Width) 고정 */
-                .sidebar-nav > div[style*="display: flex"] {
-                    flex-direction: column !important;
-                    gap: 20px !important;
-                }
-                .sidebar-nav > div[style*="display: flex"] > div {
-                    width: 100% !important;
-                }
-
-                /* 푸터(작성자 정보 + 업데이트) 모바일 중앙 정렬 & 스태킹 */
-                #memo-user-info-section {
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    text-align: center !important;
-                    gap: 16px !important;
-                    padding: 30px 16px !important;
-                    margin-top: 20px !important;
-                }
-                
-                /* 최종 업데이트 일시 위치 조정 (작성자 아래로) */
-                #memo-update-date {
-                    order: 10 !important;
-                    text-align: center !important;
-                    width: 100% !important;
-                }
-            }
-
-            /* 버튼 호버 효과 */
-            #btn-report-share-url {
-                transition: all 0.2s ease-in-out !important;
-            }
-            #btn-report-share-url:hover {
-                background-color: var(--primary-color) !important;
-                color: #ffffff !important;
-                border-color: var(--primary-color) !important;
-                box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3) !important;
-            }
-            #btn-report-share-url:active {
-                transform: scale(0.98) !important;
-            }
-
-            /* 에디터 문구 제거 */
-            .sidebar-nav > div:first-child > p {
-                display: none !important;
-            }
-
-            /* 입력 요소 비활성화 스킨 */
-            input:disabled, select:disabled {
-                border: none !important;
-                background-color: transparent !important;
-                color: var(--report-text) !important;
-                opacity: 1 !important;
-                -webkit-text-fill-color: var(--report-text) !important;
-                cursor: default !important;
-                padding-left: 0 !important;
-                font-size: 14px !important;
-                font-weight: 500 !important;
-                height: 42px !important;
-            }
-            textarea:disabled {
-                display: none !important;
-            }
-
-            /* 테이블 정렬 및 가로세로 구분 보강 (17차 준수) */
-            .report-table-row {
-                display: flex !important;
-                gap: 0 !important;
-                border-bottom: 1px solid #f1f5f9 !important;
-                padding: 0 !important;
-                align-items: stretch !important;
-            }
-            .report-table-cell {
-                padding: 12px 10px !important;
-                font-size: 13.5px !important;
-                color: var(--report-text) !important;
-                border-right: 1px solid var(--report-border) !important; /* 보더 색상 통일 (#e2e8f0) */
-                display: flex !important;
-                align-items: center !important;
-                line-height: 1.4 !important;
-                box-sizing: border-box !important;
-            }
-            .report-table-row .report-table-cell:last-child {
-                border-right: none !important;
-            }
-            .report-table-header {
-                background: var(--report-table-header) !important;
-                border-top: 1.5px solid var(--report-primary) !important;
-                border-bottom: 1.5px solid var(--report-primary) !important;
-                font-weight: 700 !important;
-                color: var(--report-primary) !important;
-            }
-            .report-table-header .report-table-cell {
-                border-right: 1px solid var(--report-border) !important;
-                color: var(--report-primary) !important;
-                justify-content: center !important;
-                text-align: center !important;
-                height: 45px !important;
-            }
-            /* 헤더 마지막 셀 보더 제거 강제 적용 */
-            .report-table-header .report-table-cell:last-child {
-                border-right: none !important;
-            }
-            .cell-center { justify-content: center !important; text-align: center !important; }
-            .cell-right { justify-content: flex-end !important; text-align: right !important; padding-right: 15px !important; }
-            .cell-left { justify-content: flex-start !important; text-align: left !important; padding-left: 15px !important; }
-
-            /* 입력 요소 비활성화 스킨 */
-            input:disabled, select:disabled {
-                border: none !important;
-                background-color: transparent !important;
-                color: var(--report-text) !important;
-                opacity: 1 !important;
-                -webkit-text-fill-color: var(--report-text) !important;
-                cursor: default !important;
-                padding-left: 0 !important;
-                font-size: 14px !important;
-                font-weight: 500 !important;
-                height: 42px !important;
-            }
-            textarea:disabled { display: none !important; }
-
-            /* 기업명 스타일 (산업 필드와 동기화) */
-            #notebook-title-editor { 
-                cursor: default !important;
-                border: none !important;
-                padding: 0 !important;
-                font-size: 14px !important;
-                font-weight: 500 !important;
-                color: var(--report-text) !important;
-            }
-            /* 기업명 래퍼 투명화 */
-            .sidebar-nav div:has(> #notebook-title-editor) {
-                background: transparent !important;
-                border: none !important;
-                padding: 0 !important;
-                height: 42px !important;
-                display: flex !important;
-                align-items: center !important;
-            }
-
-            /* 관리현황 컨테이너 투명화 */
-            #mgmt-status-group {
-                background: transparent !important;
-                border: none !important;
-                padding: 4px 0 !important;
-                gap: 10px !important;
-            }
-
-            /* 라벨 강조 (Blue) */
-            .sidebar-nav p {
-                color: var(--report-primary) !important;
-                font-weight: 600 !important;
-                font-size: 13px !important;
-                margin-bottom: 6px !important;
-                display: flex !important;
-                align-items: center !important;
-                gap: 6px !important;
-            }
-
-            /* textarea 대신 div 변환 텍스트 (투명으로 복구) */
-            .report-text-content {
-                background: transparent;
-                border: none;
-                padding: 0;
-                font-size: 14px;
-                color: var(--report-text);
-                line-height: 1.6;
-                white-space: pre-wrap;
-                word-break: break-word;
-                margin-bottom: 24px;
-            }
-
-            /* 작성자 카드 강조 (전문 리포트용) */
-            #memo-user-info-section {
-                display: flex !important;
-                margin-bottom: 0 !important;
-            }
-            .user-profile-card-oval {
-                padding: 4px 12px 4px 4px !important;
-                border-radius: 30px !important;
-                transition: all 0.2s !important;
-                cursor: pointer !important;
-            }
-            .user-profile-card-oval:hover {
-                background: var(--report-primary) !important;
-                border-color: var(--report-primary) !important;
-                transform: translateY(-1px) !important;
-                box-shadow: 0 6px 16px rgba(26, 115, 232, 0.25) !important;
-            }
-            .user-profile-card-oval:hover span {
-                color: #ffffff !important;
-            }
-            .user-profile-card-oval:hover img {
-                border-color: rgba(255,255,255,0.4) !important;
-            }
-
-            /* 칩 상태 비활성화 */
-            .btn-status-chip.active {
-                background: var(--report-primary) !important;
-                color: white !important;
-                border-color: var(--report-primary) !important;
-                box-shadow: 0 4px 10px rgba(26, 115, 232, 0.25) !important;
-            }
-
-            /* 불필요한 에디터 요소 숨기기 */
-            .main-content, #guide-panel, .right-panel, .panel-resize-handle,
-            #ai-auto-fill-btn, .top-actions button,
-            #btn-save, #btn-draft, #btn-delete-company,
-            #add-financial-btn, #add-investment-btn,
-            .btn-remove-row, .delete-file, .btn-icon-only:not([onclick*="location.href"]),
-            #investment-section div[style*="background: #f1f5f9"],
-            #financial-section div[style*="background: #f1f5f9"],
-            .investment-row, .financial-row,
-            .private-memo-section,
-            .sidebar > div:last-child {
-                display: none !important;
-            }
-
-            /* 워터마크 */
-            #report-watermark {
-                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
-                font-size: 100px; font-weight: 900; color: var(--report-primary); opacity: 0.03;
-                pointer-events: none; z-index: 9999; letter-spacing: 12px;
-            }
-
-            /* 공유 토스트 알림 */
-            #share-toast {
-                display: none;
-                position: fixed;
-                bottom: 40px;
-                left: 50%;
-                transform: translateX(-50%);
-                background-color: rgba(0, 0, 0, 0.8);
-                color: #fff;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 15px;
-                font-weight: 500;
-                z-index: 10000;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                align-items: center;
-                gap: 8px;
-            }
-            #share-toast .material-symbols-outlined {
-                font-size: 20px;
-                color: #10b981; /* Green checkmark */
-            }
-            
-            /* 리포트 모드에서 필수 항목 별표(*) 숨기기 */
-            .sidebar-nav p span[style*="color: #ef4444"] {
-                display: none !important;
-            }
-
-            @media print {
-                body, html { overflow: visible !important; height: auto !important; }
-                .sidebar { width: 100% !important; border: none !important; box-shadow: none !important; }
-            }
-        `;
-
-        if (!$('#report-mode-css').length) {
-            $('<style id="report-mode-css">').text(reportStyles).appendTo('head');
-        }
         
-        // 2. 워터마크 추가
-        if (!$('#report-watermark').length) {
-            $('<div id="report-watermark">DealChat</div>').appendTo('body');
-        }
-
-        // 3. 테이블 정밀 보정 (17차 유지)
-        reformatReportTables();
-
-        // 4. 필드 레이블에 아이콘 주입
-        injectReportIcons();
-
-        // 5. 기능 제한 및 텍스트 변환
-        $('#notebook-title-editor').attr('contenteditable', 'false');
-        $('#notebook-title-editor').parent().css({ 'background': 'transparent', 'border': 'none', 'padding': '0', 'height': '42px', 'display': 'flex', 'align-items': 'center' });
-        $('input, select, textarea').prop('disabled', true);
-
-        // textarea -> div 변환
-        ['#summary', '#key-products', '#financial-analysis', '#manager-memo'].forEach(function(sel) {
-            const $ta = $(sel);
-            if (!$ta.length) return;
-            const content = $ta.val() || '';
-            let $div = $ta.next('.report-text-content');
-            if (!$div.length) {
-                $div = $('<div class="report-text-content">');
-                $ta.after($div).hide();
+        applyReportMode({
+            primaryColor: '#1A73E8',
+            cardWidth: '900px',
+            hideSelectors: '#ai-auto-fill-btn, #btn-save-company, #btn-draft-company, #btn-delete-company, .btn-remove-row, .delete-file',
+            textareaIds: ['company-summary', 'company-key-products', 'company-fin-analysis',
+                          'company-investment-analysis', 'company-memo', 'company-manager-memo'],
+            afterApply: () => {
+                reformatReportTables();
+                injectReportIcons();
             }
-            $div.text(content);
         });
 
         // 산업 분야 텍스트화 (기타 일 경우 상세 입력값 반영)

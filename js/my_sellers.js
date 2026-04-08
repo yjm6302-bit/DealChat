@@ -2,6 +2,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
 import { escapeHtml } from './utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 // 수파베이스 클라이언트 초기화 통합
 const _supabase = window.supabaseClient || supabase.createClient(window.config.supabase.url, window.config.supabase.anonKey);
@@ -365,23 +366,6 @@ window.openShareModal = function (sellerId) {
 };
 
 
-function renderPagination() {
-    const container = $('#pagination-container');
-    container.empty();
-    const totalPages = Math.ceil(filteredSellers.length / itemsPerPage);
-    if (totalPages <= 1) return;
-
-    for (let i = 1; i <= totalPages; i++) {
-        const active = i === currentPage ? 'active' : '';
-        container.append(`<button class="btn btn-sm btn-outline-purple ${active} mx-1" style="border-color: #8b5cf6; color: ${i === currentPage ? 'white' : '#8b5cf6'}; background-color: ${i === currentPage ? '#8b5cf6' : 'transparent'};" onclick="changePage(${i})">${i}</button>`);
-    }
-}
-
-window.changePage = function (page) {
-    currentPage = page;
-    renderSellers();
-    renderPagination();
-};
 
 function updateFilterOptions() {
     const $list = $('#filter-industry-list');
@@ -453,7 +437,15 @@ function applySort(type) {
     
     currentPage = 1;
     renderSellers();
-    renderPagination();
+    renderPagination({
+        totalItems: filteredSellers.length,
+        itemsPerPage: itemsPerPage,
+        currentPage: currentPage,
+        onPageChange: (p) => {
+            currentPage = p;
+            renderSellers();
+        }
+    });
 }
 
 function exportToCSV() {

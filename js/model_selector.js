@@ -10,13 +10,10 @@
  */
 
 export const AVAILABLE_MODELS = [
-    { id: 'gemini-3.1-flash-live-preview', name: 'Gemini 3.1 Flash Live' },
-    { id: 'gemini-3.1-pro',                name: 'Gemini 3.1 Pro' },
-    { id: 'gemini-3.1-flash',              name: 'Gemini 3.1 Flash' },
-    { id: 'gemini-2.5-pro',               name: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.5-flash',             name: 'Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-flash-lite',        name: 'Gemini 2.5 Flash-Lite' },
-    { id: 'gemini-2.0-flash',             name: 'Gemini 2.0 Flash' },
+    { id: 'gemini-2.0-flash',     name: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro',       name: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash',     name: 'Gemini 1.5 Flash' },
+    { id: 'gemini-1.5-flash-8b',  name: 'Gemini 1.5 Flash-8B' },
 ];
 
 /**
@@ -31,10 +28,13 @@ export function initModelSelector(addAiResponseFn) {
         if (!modelStatusMap[m.id]) modelStatusMap[m.id] = 'available';
     });
 
-    let currentModelId =
-        localStorage.getItem('dealchat_selected_model') ||
-        (window.config?.ai?.model) ||
-        'gemini-2.0-flash';
+    let currentModelId = localStorage.getItem('dealchat_selected_model') || (window.config?.ai?.model);
+
+    // [Fix] 선택된 모델이 현재 사용 가능한 리스트에 없으면 기본 모델로 초기화
+    if (!AVAILABLE_MODELS.find(m => m.id === currentModelId)) {
+        currentModelId = AVAILABLE_MODELS[0].id;
+        localStorage.setItem('dealchat_selected_model', currentModelId);
+    }
 
     if (window.config?.ai) {
         window.config.ai.model = currentModelId;
@@ -110,7 +110,12 @@ export function initModelSelector(addAiResponseFn) {
                 }
             } catch (err) {
                 console.error(`Error checking model ${model.id}:`, err);
-                modelStatusMap[model.id] = 'error';
+                const errMsg = err.message || '';
+                if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+                    modelStatusMap[model.id] = 'exceeded';
+                } else {
+                    modelStatusMap[model.id] = 'error';
+                }
             }
         });
 

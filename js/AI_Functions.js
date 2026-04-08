@@ -22,8 +22,8 @@ export function countTokens(text) {
 export function addAiResponse(userInput, sourceTexts, overrideModel = null) {
     const config = getConfig();
     const AI_ENDPOINT = config.supabase.aiHandlerUrl;
-    const modelName = overrideModel || config.ai.model || 'gemini-2.5-flash';
-    let modelConfig = config.ai.tokenLimits[modelName] || config.ai.tokenLimits['gemini-2.1-flash'] || config.ai.tokenLimits['gemini-2.0-flash'];
+    const modelName = overrideModel || config.ai.model || 'gemini-2.0-flash';
+    let modelConfig = config.ai.tokenLimits[modelName] || config.ai.tokenLimits['gemini-1.5-flash'];
 
     const MAX_TOKEN = modelConfig.maxContextTokens;
     const SAFETY_MARGIN = modelConfig.safetyMargin;
@@ -45,7 +45,7 @@ export function addAiResponse(userInput, sourceTexts, overrideModel = null) {
         [User Question]
         ${userInput}
         [Instructions]
-        Answer in Korean. Professional tone.
+        Answer in Korean. Professional tone. Keep the answer concise and to the point.
     `.trim();
 
     const payload = { 

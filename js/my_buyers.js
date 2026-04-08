@@ -2,6 +2,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
 import { escapeHtml } from './utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 // 수파베이스 클라이언트 초기화 통합
 const _supabase = window.supabaseClient || supabase.createClient(window.config.supabase.url, window.config.supabase.anonKey);
@@ -397,23 +398,6 @@ $(document).on('input', '#share-user-search', function () {
 });
 
 
-function renderPagination() {
-    const container = $('#pagination-container');
-    container.empty();
-    const totalPages = Math.ceil(filteredBuyers.length / itemsPerPage);
-    if (totalPages <= 1) return;
-
-    for (let i = 1; i <= totalPages; i++) {
-        const active = i === currentPage ? 'active' : '';
-        container.append(`<button class="btn btn-sm btn-outline-teal ${active} mx-1" style="border-color: #0d9488; color: ${i === currentPage ? 'white' : '#0d9488'}; background-color: ${i === currentPage ? '#0d9488' : 'transparent'};" onclick="changePage(${i})">${i}</button>`);
-    }
-}
-
-window.changePage = function (page) {
-    currentPage = page;
-    renderBuyers();
-    renderPagination();
-};
 
 function updateFilterOptions() {
     const $list = $('#filter-industry-list');
@@ -459,7 +443,15 @@ function applySort(type) {
     
     currentPage = 1;
     renderBuyers();
-    renderPagination();
+    renderPagination({
+        totalItems: filteredBuyers.length,
+        itemsPerPage: itemsPerPage,
+        currentPage: currentPage,
+        onPageChange: (p) => {
+            currentPage = p;
+            renderBuyers();
+        }
+    });
 }
 
 function exportToCSV() {

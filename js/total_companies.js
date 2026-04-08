@@ -2,6 +2,7 @@ import { checkAuth, updateHeaderProfile, initUserMenu, hideLoader, resolveAvatar
 import { APIcall } from './APIcallFunction.js';
 import { initExternalSharing } from './sharing_utils.js';
 import { debounce, escapeHtml } from './utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 // 프로필 모달 스크립트 로드
 const script = document.createElement('script');
@@ -422,7 +423,16 @@ function applyFilters() {
 
     currentPage = 1;
     renderCompanies();
-    renderPagination();
+    renderPagination({
+        totalItems: filteredCompanies.length,
+        itemsPerPage: itemsPerPage,
+        currentPage: currentPage,
+        onPageChange: (p) => {
+            currentPage = p;
+            renderCompanies();
+        },
+        scrollToSelector: '.search-and-actions'
+    });
 }
 
 function renderCompanies() {
@@ -657,35 +667,6 @@ function updateInboxControls() {
     $('#inbox-select-all').prop('disabled', items.length === 0).prop('checked', items.length > 0 && count === items.length);
 }
 
-function renderPagination() {
-    const $container = $('#pagination-container').empty();
-    const total = Math.ceil(filteredCompanies.length / itemsPerPage);
-    if (total < 1) return; // 0페이지인 경우만 숨김 (1페이지부터는 표시)
-
-    const prevD = currentPage === 1 ? 'disabled' : '';
-    const nextD = currentPage === total ? 'disabled' : '';
-    
-    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(1)"><span class="material-symbols-outlined">keyboard_double_arrow_left</span></button>`);
-    $container.append(`<button class="pg-btn" ${prevD} onclick="changePage(${currentPage - 1})"><span class="material-symbols-outlined">chevron_left</span></button>`);
-    
-    let start = Math.max(1, currentPage - 2);
-    let end = Math.min(total, start + 4);
-    if (end - start < 4) start = Math.max(1, end - 4);
-    
-    for (let i = start; i <= end; i++) {
-        $container.append(`<button class="pg-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`);
-    }
-    
-    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${currentPage + 1})"><span class="material-symbols-outlined">chevron_right</span></button>`);
-    $container.append(`<button class="pg-btn" ${nextD} onclick="changePage(${total})"><span class="material-symbols-outlined">keyboard_double_arrow_right</span></button>`);
-}
-
-window.changePage = function (p) {
-    currentPage = p;
-    renderCompanies();
-    renderPagination();
-    document.querySelector('.search-and-actions').scrollIntoView({ behavior: 'smooth' });
-};
 
 function parseCompanyData(company) {
     const parsed = { ...company };

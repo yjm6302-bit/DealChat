@@ -28,8 +28,6 @@ export function addAiResponse(userInput, sourceTexts, overrideModel = null) {
     const MAX_TOKEN = modelConfig.maxContextTokens;
     const SAFETY_MARGIN = modelConfig.safetyMargin;
 
-    console.log(`Using Gemini Model: ${modelName} (Max: ${MAX_TOKEN} tokens)`);
-
     let truncatedSource = sourceTexts || "";
     // Gemini는 100만 토큰까지 수용 가능하므로, 50만자(약 20~30만 토큰 이상) 이하일 경우 자를 필요가 없음
     if (countTokens(truncatedSource) > (MAX_TOKEN - SAFETY_MARGIN)) {

@@ -1,4 +1,6 @@
 import { checkAuth, hideLoader, showLoader, resolveAvatarUrl } from './auth_utils.js';
+import { renderPagination } from './pagination_utils.js';
+
 
 const _supabase = window.supabaseClient || supabase.createClient(
     window.config.supabase.url, window.config.supabase.anonKey
@@ -289,7 +291,17 @@ function applyFilters() {
     } else {
         $('#empty-state').hide();
         renderList();
-        renderPagination();
+        renderPagination({
+            containerId: 'pagination-container',
+            totalItems: filteredItems.length,
+            itemsPerPage: ITEMS_PER_PAGE,
+            currentPage: currentPage,
+            onPageChange: (newPage) => {
+                currentPage = newPage;
+                renderList();
+            },
+            scrollToSelector: '.search-and-actions'
+        });
     }
 }
 
@@ -518,41 +530,6 @@ function showEmpty() {
     $('#empty-state').css('display', 'flex');
 }
 
-// ── Pagination ─────────────────────────────────────────────────────────────────
-function renderPagination() {
-    const $c         = $('#pagination-container').empty();
-    const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-    if (totalPages <= 1) return;
-
-    const icon = name => `<span class="material-symbols-outlined">${name}</span>`;
-    const btn  = (content, page, disabled = false, active = false) =>
-        `<button class="pg-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : ''} onclick="changePage(${page})">${content}</button>`;
-
-    const atFirst = currentPage === 1;
-    const atLast  = currentPage === totalPages;
-
-    $c.append(btn(icon('keyboard_double_arrow_left'), 1, atFirst));
-    $c.append(btn(icon('chevron_left'), currentPage - 1, atFirst));
-
-    let s = Math.max(1, currentPage - 2);
-    let e = Math.min(totalPages, s + 4);
-    if (e - s < 4) s = Math.max(1, e - 4);
-    for (let i = s; i <= e; i++) {
-        $c.append(btn(i, i, false, i === currentPage));
-    }
-
-    $c.append(btn(icon('chevron_right'), currentPage + 1, atLast));
-    $c.append(btn(icon('keyboard_double_arrow_right'), totalPages, atLast));
-}
-
-window.changePage = function (page) {
-    const total = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-    if (page < 1 || page > total) return;
-    currentPage = page;
-    renderList();
-    renderPagination();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
 
 // ── Delete Share ───────────────────────────────────────────────────────────────
 async function handleDeleteShare(shareId) {

@@ -29,7 +29,6 @@ $(document).ready(function () {
             .then(response => response.json())
             .then(data => {
                 const item = Array.isArray(data) ? data[0] : data;
-                console.log(item);
                 if (item) {
                     $('#seller-id').val(item.id);
                     $('#companyName').val(item.company_name || item.companyName);

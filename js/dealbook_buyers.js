@@ -72,7 +72,7 @@ $(document).ready(function () {
 
     if (!userData || !userData.isLoggedIn) {
         if (fromSource === 'shared' && buyerId) {
-            console.log('Non-member accessing shared buyer report');
+
         } else {
             checkAuth();
             return;
@@ -87,7 +87,7 @@ $(document).ready(function () {
     // [New] 기업명 추천 드롭다운 로직 (이전 제작됨)
     // ==========================================
     function loadUserCompanies() {
-        console.log('입력 추천용 내 기업 목록 불러오는 중...');
+
         APIcall({ action: 'get', table: 'companies', user_id: currentuser_id }, SUPABASE_ENDPOINT, { 'Content-Type': 'application/json' })
         .then(r => r.json())
         .then(data => {
@@ -107,7 +107,7 @@ $(document).ready(function () {
         $('#buyer-manager').val(company.ceo_name || "");
         $('#buyer-email').val(company.email || "");
         $('#buyer-summary').val(company.summary || "");
-        $('#buyer-memo').val(company.manager_memo || "");
+        $('#private-memo').val(company.manager_memo || "");
         $('#buyer-company-suggestions').hide().empty();
     }
 
@@ -206,7 +206,7 @@ $(document).ready(function () {
         $('#buyer-status').val(item.status || '대기');
         $('#buyer-summary').val(item.summary || '');
         $('#buyer-interest-summary').val(item.interest_summary || '');
-        $('#buyer-memo').val(item.memo || '');
+        $('#private-memo').val(item.private_memo || '');
         setBuyerStatusChip(item.status || '대기');
 
         if (item.user_id) fetchAuthorInfo(item.user_id);
@@ -294,7 +294,7 @@ $(document).ready(function () {
         const originalHtml = $btn.html();
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 분석 중...');
         try {
-            const prompt = "매수자 정보를 JSON 형식으로 추출해줘 (company_name, interest_industry, manager_name, email, available_funds, summary, interest_summary, memo)";
+            const prompt = "매수자 정보를 JSON 형식으로 추출해줘 (company_name, interest_industry, manager_name, email, available_funds, summary, interest_summary, private_memo)";
             const res = await addAiResponse(prompt, contextText);
             const data = await res.json();
             const jsonText = data.answer || data.text || "";
@@ -308,7 +308,7 @@ $(document).ready(function () {
             if (json.available_funds) $('#buyer-investment').val(json.available_funds);
             if (json.summary) $('#buyer-summary').val(json.summary);
             if (json.interest_summary) $('#buyer-interest-summary').val(json.interest_summary);
-            if (json.memo) $('#buyer-memo').val(json.memo);
+            if (json.private_memo) $('#private-memo').val(json.private_memo);
             autoResizeAllTextareas();
             alert('AI 분석이 완료되었습니다.');
         } catch (e) {
@@ -405,7 +405,7 @@ $(document).ready(function () {
             email: $('#buyer-email').val(),
             available_funds: $('#buyer-investment').val(),
             interest_summary: $('#buyer-interest-summary').val(),
-            memo: $('#buyer-memo').val(),
+            private_memo: $('#private-memo').val(),
             user_id: currentuser_id,
             is_draft: shareType === 'private',
             history: conversationHistory,
@@ -551,14 +551,13 @@ $(document).ready(function () {
 
     function applyBuyerReadOnlyMode() {
         applyReportMode({
-            hideSelectors: ['#buyer-memo'],
+            hideSelectors: ['#private-memo-section'],
             textareaIds: ['buyer-summary', 'buyer-interest-summary'],
             afterApply: () => {
                 injectReportSectionIcons({
                     'status-chip-group': 'account_tree',
                     'buyer-summary': 'description',
-                    'buyer-interest-summary': 'business_center',
-                    'buyer-memo': 'lock'
+                    'buyer-interest-summary': 'business_center'
                 });
             }
         });

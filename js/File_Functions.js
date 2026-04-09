@@ -35,22 +35,22 @@ export const validateText = (text) => {
 
 export async function extractTextFromPDF(file) {
     try {
-        console.log('PDF extraction: Loading file...');
+
         const arrayBuffer = await file.arrayBuffer();
-        console.log('PDF extraction: ArrayBuffer size:', arrayBuffer.byteLength);
+
 
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        console.log('PDF extraction: Document loaded, pages:', pdf.numPages);
+
 
         let text = "";
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
             const pageText = content.items.map(item => item.str).join(" ");
-            console.log(`PDF extraction: Page ${i} text length:`, pageText.length);
+
             text += pageText + "\n";
         }
-        console.log('PDF extraction: Total text length:', text.length);
+
         return text;
     } catch (error) {
         console.error('PDF extraction error:', error);
@@ -139,7 +139,7 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
     // 미리 추출된 텍스트가 없으면 추출 시도
     if (!extractedText) {
         try {
-            console.log('Starting text extraction for:', file.name, 'Type:', file.type);
+
             if (file.type === "application/pdf") {
                 extractedText = await extractTextFromPDF(file);
             } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
@@ -149,8 +149,7 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
             } else if (file.type === "text/plain") {
                 extractedText = await extractTextFromTxt(file);
             }
-            console.log('Extracted text length:', extractedText.length);
-            console.log('First 100 chars:', extractedText.substring(0, 100));
+
 
             // 텍스트 추출 실패 시 로그 출력 (기본 메시지 생성 보장 -> 검증 실패 유도)
             if (!extractedText || extractedText.trim().length === 0) {
@@ -161,7 +160,7 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
             // 에러 발생 시 extractedText는 null/empty 상태 유지 -> 아래 검증에서 걸러짐
         }
     } else {
-        console.log('Using pre-extracted text. Length:', extractedText.length);
+
     }
 
     // 2. 텍스트 품질 검증 (업로드는 무조건 진행하되, 품질 상태만 파악)
@@ -198,21 +197,14 @@ export async function fileUpload(file, user_id = null, companyId = null, preExtr
                 vectorNamespace: vectorNamespace !== undefined ? vectorNamespace : (companyId || null)
             };
 
-            console.log('Upload payload:', {
-                file_name: payload.file_name,
-                parsedText_length: payload.parsedText ? payload.parsedText.length : 0,
-                summary_length: payload.summary ? payload.summary.length : 0,
-                summary_preview: payload.summary ? payload.summary.substring(0, 50) : '',
-                companyId: payload.companyId,
-                vectorNamespace: payload.vectorNamespace
-            });
 
-            console.log('Sending upload request to endpoint:', payload.action === 'upload' ? 'UploadHandler' : 'REST/AI Handler');
+
+
             try {
                 const response = await APIcall(payload); // Defaults to Supabase endpoint
                 const result = await response.json();    // JSON 파싱
 
-                console.log('Upload success result:', result);
+
                 resolve(result);
             } catch (err) {
                 console.error('APIcall failed during upload:', err);

@@ -52,7 +52,7 @@ $(document).ready(function () {
     // 비회원 & 외부 공유 링크인 경우 예외 허용
     if (!userData || !userData.isLoggedIn) {
         if (fromSource === 'shared' && sellerId) {
-            console.log('Non-member accessing shared seller report');
+
             // loadSellerData handles NDA and redirect
         } else {
             checkAuth(); // 로그인 페이지로 리다이렉트
@@ -684,7 +684,7 @@ $(document).ready(function () {
             try {
                 // File_Functions.js의 fileUpload는 내부적으로 DB Insert까지 수행함
                 const uploadResult = await fileUpload(file, user_id, isNew ? null : sellerId, null, isNew ? null : sellerId);
-                console.log('Upload Result:', uploadResult);
+
                 
                 const uploadedFile = Array.isArray(uploadResult) ? uploadResult[0] : uploadResult;
                 

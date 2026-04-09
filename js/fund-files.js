@@ -24,7 +24,7 @@ $(document).ready(function () {
 
     const datasource = {
         getRows: (params) => {
-            console.log('Fund Files: Fetching skipped. Server API not yet configured for this page.');
+
             params.successCallback([], 0);
         }
     };

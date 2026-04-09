@@ -93,7 +93,6 @@ export function initModelSelector(addAiResponseFn) {
             return;
         }
 
-        console.log('🔄 AI 모델 로드 상태 체크 중...');
         const $refreshBtn = $('#btn-refresh-status');
         if ($refreshBtn.length) $refreshBtn.find('span').addClass('spin-animation');
 
@@ -122,7 +121,6 @@ export function initModelSelector(addAiResponseFn) {
         localStorage.setItem('dealchat_model_status', JSON.stringify(modelStatusMap));
         renderModelDropdown();
         if ($refreshBtn.length) $refreshBtn.find('span').removeClass('spin-animation');
-        console.log('✅ AI 모델 상태 업데이트 완료');
     }
 
     function selectModel(modelId) {
@@ -131,7 +129,6 @@ export function initModelSelector(addAiResponseFn) {
         if (window.config?.ai) window.config.ai.model = modelId;
         renderModelDropdown();
         $('#model-dropdown').removeClass('show');
-        console.log(`🤖 AI 모델 변경됨: ${modelId}`);
     }
 
     function markModelAsExceeded(modelId) {

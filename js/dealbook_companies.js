@@ -50,7 +50,7 @@ $(document).ready(function () {
 
     if (!userData || !userData.isLoggedIn) {
         if (fromSource === 'shared' && companyId) {
-            console.log('Non-member accessing shared company report');
+
         } else {
             checkAuth();
             return;
@@ -96,7 +96,7 @@ $(document).ready(function () {
 
     async function loadCompanyData() {
         try {
-            console.log('데이터 로딩 시작 (ID:', companyId, ')');
+
             
             // 모든 사용자 정보 로드 (작성자 표시용)
             const { data: users, error: uError } = await _supabase.from('users').select('*');
@@ -614,7 +614,7 @@ $(document).ready(function () {
 4. 반드시 유효한 JSON 형식으로만 답변하세요. 다른 설명은 생략하세요.
             `.trim();
 
-            console.log('🤖 AI 자동 입력 분석 시작...');
+
             const response = await addAiResponse(prompt, contextText);
             const data = await response.json();
             
@@ -647,14 +647,14 @@ $(document).ready(function () {
                     // 잘린 JSON 복구 시도 (닫히지 않은 괄호 강제 삽입)
                     const repairedJson = tryRepairJson(jsonString);
                     jsonData = JSON.parse(repairedJson);
-                    console.log('✅ JSON 복구 성공:', jsonData);
+
                 } catch (rErr) {
                     console.error('❌ JSON 복구 및 파싱 최종 실패. 추출된 문자열:', jsonString);
                     throw new Error('AI 응답이 도중에 끊겼거나 형식이 올바르지 않습니다. (추출 실패)');
                 }
             }
             
-            console.log('🤖 AI 추출 데이터:', jsonData);
+
 
             // 데이터 UI 매핑
             if (jsonData.name) $('#notebook-title-editor').text(jsonData.name);
@@ -820,10 +820,10 @@ $(document).ready(function () {
                 ragContext,
             });
             
-            console.log('🤖 AI 요청 전송 중...');
+
             const response = await addAiResponse(text, context);
             const data = await response.json();
-            console.log('🤖 AI 응답 수신:', data);
+
             
             const answer = data.answer || data.text || data.response || '죄송합니다. 답변을 생성하지 못했습니다.';
             

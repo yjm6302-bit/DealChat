@@ -17,7 +17,7 @@ $(document).ready(function () {
             try {
                 const userData = JSON.parse(userDataStr);
                 if (userData && userData.isLoggedIn) {
-                    // console.log('Auto-filling user data:', userData);
+
                     if (userData.name) $('input[name="name"]').val(userData.name);
                     if (userData.email) $('input[name="email"]').val(userData.email);
                     if (userData.company) $('input[name="companyName"]').val(userData.company);

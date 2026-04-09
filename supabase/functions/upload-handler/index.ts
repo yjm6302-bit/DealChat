@@ -1,22 +1,59 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS, DELETE, PUT, PATCH",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// 간단한 메모리 기반 Rate Limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 30; // 분당 최대 요청 수
+const RATE_WINDOW = 60 * 1000; // 1분 (밀리초)
+
+function checkRateLimit(identifier: string): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(identifier);
+    if (!entry || now > entry.resetTime) {
+        rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_WINDOW });
+        return true;
+    }
+    entry.count++;
+    if (entry.count > RATE_LIMIT) {
+        return false;
+    }
+    return true;
+}
+
+const ALLOWED_ORIGINS = [
+    "https://afitwguexwihnepyutqw.supabase.co",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+];
+
+const ALLOWED_TYPES = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+];
+
+function getCorsHeaders(req: Request) {
+    const origin = req.headers.get("origin") || "";
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
+}
 
 // --- Helpers ---
 
-function createResponse(body: any, status: number = 200) {
+function createResponse(body: any, status: number = 200, req?: Request) {
+    const cors = req ? getCorsHeaders(req) : getCorsHeaders(new Request("https://dummy"));
     return new Response(JSON.stringify(body), {
         status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
     });
 }
 
-function errorResponse(message: string, status: number = 400) {
-    return createResponse({ error: message }, status);
+function errorResponse(message: string, status: number = 400, req?: Request) {
+    return createResponse({ error: message }, status, req);
 }
 
 // Reusable logic for RAG/Embeddings
@@ -84,8 +121,16 @@ async function generateAndStoreEmbeddings(
 // --- Main Handler ---
 
 Deno.serve(async (req) => {
+    // Rate Limiting
+    const clientIP = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    if (!checkRateLimit(clientIP)) {
+        return new Response(JSON.stringify({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }), {
+            status: 429,
+            headers: { "Content-Type": "application/json", "Retry-After": "60" },
+        });
+    }
     if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
+        return new Response("ok", { headers: getCorsHeaders(req) });
     }
 
     try {
@@ -105,8 +150,13 @@ Deno.serve(async (req) => {
             const table = formData.get("table") as string || "files";
 
             if (action === "upload" && file) {
-                const fileName = file.name;
-                const storagePath = `${userId}/${fileName}`;
+                // 서버측 파일 타입 검증
+                if (!ALLOWED_TYPES.includes(file.type)) {
+                    return errorResponse(`허용되지 않는 파일 형식입니다: ${file.type}`, 400, req);
+                }
+                const rawFileName = file.name;
+                const safeName = `${Date.now()}_${rawFileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+                const storagePath = `${userId}/${safeName}`;
 
                 // Upload to Storage
                 const { error: uploadError } = await supabase.storage
@@ -120,7 +170,7 @@ Deno.serve(async (req) => {
 
                 // Update Database (Unified schema strategy)
                 const fileMetadata: Record<string, any> = {
-                    file_name: fileName,
+                    file_name: rawFileName,
                     location: storagePath,      // Legacy
                     storage_path: storagePath,  // v2
                     userId: userId,             // Legacy
@@ -138,7 +188,7 @@ Deno.serve(async (req) => {
                     throw dbError;
                 }
 
-                return createResponse({ message: "Upload success", data });
+                return createResponse({ message: "Upload success", data }, 200, req);
             }
         }
 
@@ -147,13 +197,13 @@ Deno.serve(async (req) => {
         try {
             body = await req.json();
         } catch (e) {
-            return errorResponse("Invalid JSON");
+            return errorResponse("Invalid JSON", 400, req);
         }
 
         const { action, table } = body;
 
         if (!action || !table) {
-            return errorResponse("Missing action or table");
+            return errorResponse("Missing action or table", 400, req);
         }
 
         const query = supabase.from(table);
@@ -165,7 +215,7 @@ Deno.serve(async (req) => {
             if (id) {
                 const { data, error } = await query.select("*").eq("id", id).single();
                 if (error) throw error;
-                return createResponse(data);
+                return createResponse(data, 200, req);
             } else {
                 let select = query.select("*");
 
@@ -192,7 +242,8 @@ Deno.serve(async (req) => {
 
                 // Search keyword
                 if (keyword && typeof keyword === 'string' && keyword.trim() !== "") {
-                    const cleanKw = keyword.trim();
+                    const cleanKw = keyword.trim().replace(/[,()."\\\\]/g, '');
+                    if (cleanKw.length === 0) return createResponse([], 200, req);
                     const nfcKw = cleanKw.normalize('NFC');
                     const nfdKw = cleanKw.normalize('NFD');
 
@@ -207,7 +258,7 @@ Deno.serve(async (req) => {
 
                 const { data, error } = await select;
                 if (error) throw error;
-                return createResponse(data);
+                return createResponse(data, 200, req);
             }
 
         } else if (action === "upload" || action === "create") {
@@ -215,6 +266,10 @@ Deno.serve(async (req) => {
 
             // Handle Base64 Upload (often from File_Functions.js)
             if (rawData.is_base64 && rawData.content) {
+                // 서버측 파일 타입 검증
+                if (rawData.content_type && !ALLOWED_TYPES.includes(rawData.content_type)) {
+                    return errorResponse(`허용되지 않는 파일 형식입니다: ${rawData.content_type}`, 400, req);
+                }
                 const { content, file_name, content_type, is_base64: _is_base64, ...metadata } = rawData;
                 
                 // Flexible userId extraction
@@ -225,9 +280,18 @@ Deno.serve(async (req) => {
                 const vectorNamespace = metadata.vectorNamespace || metadata.companyId;
 
                 const timestamp = Date.now();
-                const ext = file_name.substring(file_name.lastIndexOf('.'));
+                // 파일명 소독: 경로 탐색 문자 및 위험 문자 제거
+                const rawExt = file_name.substring(file_name.lastIndexOf('.'));
+                const ext = rawExt.replace(/[^a-zA-Z0-9.]/g, '');
                 const safeFileName = `${timestamp}${ext}`;
                 const storagePath = `${userId}/${safeFileName}`;
+
+                // 파일 크기 검증 (50MB 제한)
+                const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+                const estimatedSize = Math.ceil(content.length * 3 / 4);
+                if (estimatedSize > MAX_FILE_SIZE) {
+                    return errorResponse(`파일 크기가 제한(50MB)을 초과합니다.`, 400, req);
+                }
 
                 // Decode base64
                 const binaryStr = atob(content);
@@ -277,7 +341,7 @@ Deno.serve(async (req) => {
                     }
                 }
 
-                return createResponse(result);
+                return createResponse(result, 200, req);
             }
 
             // Normal JSON create/upload (not base64)
@@ -295,7 +359,7 @@ Deno.serve(async (req) => {
 
             const { data: result, error } = await query.insert(data).select();
             if (error) throw error;
-            return createResponse(result);
+            return createResponse(result, 200, req);
 
         } else if (action === "update") {
             const { id, action: _upd, table: __upd, ...updRawData } = body;
@@ -311,27 +375,27 @@ Deno.serve(async (req) => {
 
             const { data: result, error } = await query.update(data).eq("id", id).select();
             if (error) throw error;
-            return createResponse(result);
+            return createResponse(result, 200, req);
 
         } else if (action === "delete") {
             const targetId = body.id || body.fileId;
             const { data: result, error } = await query.delete().eq("id", targetId).select();
             if (error) throw error;
-            return createResponse(result);
+            return createResponse(result, 200, req);
 
         } else if (action === "index_existing") {
             const { parsedText, vectorNamespace, fileId, file_name, userId } = body;
 
             if (!parsedText || !vectorNamespace || !fileId) {
-                return errorResponse("Missing parsedText, vectorNamespace, or fileId");
+                return errorResponse("Missing parsedText, vectorNamespace, or fileId", 400, req);
             }
 
             try {
                 await generateAndStoreEmbeddings(parsedText, vectorNamespace, fileId, file_name, userId, supabase);
-                return createResponse({ message: "Indexing success" });
+                return createResponse({ message: "Indexing success" }, 200, req);
             } catch (vecErr: any) {
                 console.error("Vector generation failed:", vecErr);
-                return createResponse({ error: vecErr.message }, 500);
+                return createResponse({ error: vecErr.message }, 500, req);
             }
 
         } else if (action === "delete_vector") {
@@ -339,7 +403,7 @@ Deno.serve(async (req) => {
             const { fileId, vectorNamespace } = body;
 
             if (!fileId || !vectorNamespace) {
-                return errorResponse("Missing fileId or vectorNamespace");
+                return errorResponse("Missing fileId or vectorNamespace", 400, req);
             }
 
             // Delete from document_sections using metadata filter
@@ -351,13 +415,18 @@ Deno.serve(async (req) => {
 
             if (error) throw error;
 
-            return createResponse({ message: "Vectors deleted" });
+            return createResponse({ message: "Vectors deleted" }, 200, req);
         }
 
-        return errorResponse(`Unknown action: ${action}`);
+        return errorResponse(`Unknown action: ${action}`, 400, req);
 
     } catch (error: any) {
-        console.error(error);
-        return createResponse({ error: error.message || String(error) }, 500);
+        console.error("[upload-handler error]", error);
+        const message = error.message || String(error);
+        // 내부 에러 상세를 클라이언트에 노출하지 않음
+        const safeMessage = message.includes("env") || message.includes("key") 
+            ? "서버 내부 오류가 발생했습니다." 
+            : message;
+        return createResponse({ error: safeMessage }, 500, req);
     }
 });

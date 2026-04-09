@@ -179,7 +179,7 @@ $(document).ready(function () {
             currentAvatar = publicUrl;
             selectedFile = file;
             
-            console.log('Avatar uploaded and set:', currentAvatar);
+
 
         } catch (err) {
             console.error('Avatar upload error:', err);

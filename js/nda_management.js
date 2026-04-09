@@ -1,4 +1,5 @@
 import { hideLoader, resolveAvatarUrl, DEFAULT_MANAGER as AUTH_DEFAULT_MANAGER } from './auth_utils.js';
+import { renderPagination } from './pagination_utils.js';
 
 let supabase;
 
@@ -112,6 +113,9 @@ function getIndustryIcon(industry) {
 }
 
 let allLogs = [];
+const ITEMS_PER_PAGE = 15;
+let currentPage = 1;
+let filteredLogs = [];
 
 async function loadNdaLogs() {
     try {
@@ -199,16 +203,26 @@ async function loadNdaLogs() {
 }
 
 function renderLogs(logs) {
+    filteredLogs = logs;
+    currentPage = 1;
+    renderCurrentPage();
+}
+
+function renderCurrentPage() {
     const $container = $('#nda-logs-container');
     $container.empty();
 
-    if (logs.length === 0) {
+    if (filteredLogs.length === 0) {
         $('#empty-state').css('display', 'flex');
+        $('#pagination-container').empty();
         return;
     }
     $('#empty-state').css('display', 'none');
 
-    logs.forEach((log) => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageLogs = filteredLogs.slice(start, start + ITEMS_PER_PAGE);
+
+    pageLogs.forEach((log) => {
         const date = new Date(log.created_at);
         const formattedDate = `${date.getFullYear()}.${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}`;
 
@@ -273,6 +287,18 @@ function renderLogs(logs) {
         });
 
         $container.append($row);
+    });
+
+    renderPagination({
+        containerId: 'pagination-container',
+        totalItems: filteredLogs.length,
+        itemsPerPage: ITEMS_PER_PAGE,
+        currentPage: currentPage,
+        onPageChange: (newPage) => {
+            currentPage = newPage;
+            renderCurrentPage();
+        },
+        scrollToSelector: '.search-and-actions'
     });
 }
 

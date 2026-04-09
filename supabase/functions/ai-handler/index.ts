@@ -1,15 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS, DELETE, PUT, PATCH",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// 간단한 메모리 기반 Rate Limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 30; // 분당 최대 요청 수
+const RATE_WINDOW = 60 * 1000; // 1분 (밀리초)
+
+function checkRateLimit(identifier: string): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(identifier);
+    if (!entry || now > entry.resetTime) {
+        rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_WINDOW });
+        return true;
+    }
+    entry.count++;
+    if (entry.count > RATE_LIMIT) {
+        return false;
+    }
+    return true;
+}
+
+const ALLOWED_ORIGINS = [
+    "https://afitwguexwihnepyutqw.supabase.co",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+];
+
+function getCorsHeaders(req: Request) {
+    const origin = req.headers.get("origin") || "";
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
+}
 
 serve(async (req) => {
+    // Rate Limiting
+    const clientIP = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    if (!checkRateLimit(clientIP)) {
+        return new Response(JSON.stringify({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }), {
+            status: 429,
+            headers: { "Content-Type": "application/json", "Retry-After": "60" },
+        });
+    }
     if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
+        return new Response("ok", { headers: getCorsHeaders(req) });
     }
 
     try {
@@ -71,7 +108,7 @@ serve(async (req) => {
             const results = documents ? documents.map((doc: any) => doc.content) : [];
 
             return new Response(JSON.stringify({ results }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
             });
         }
 
@@ -111,7 +148,7 @@ serve(async (req) => {
         if (data.error) {
             return new Response(JSON.stringify({ error: data.error, model_used: model }), {
                 status: response.status,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
             });
         }
 
@@ -119,13 +156,18 @@ serve(async (req) => {
         const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
 
         return new Response(JSON.stringify({ answer }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
 
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: any) {
+        console.error("[ai-handler error]", error);
+        const message = error.message || String(error);
+        const safeMessage = message.includes("API_KEY") || message.includes("env")
+            ? "AI 서비스 오류가 발생했습니다."
+            : message;
+        return new Response(JSON.stringify({ error: safeMessage }), {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
     }
 });

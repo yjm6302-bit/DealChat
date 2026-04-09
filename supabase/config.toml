@@ -86,6 +86,7 @@ enabled = true
 # Port to use for Supabase Studio.
 port = 54323
 # External URL of the API server that frontend connects to.
+# [PRODUCTION] 프로덕션 배포 시 Supabase Dashboard에서 API URL을 확인하세요. 이 값은 로컬 개발용입니다.
 api_url = "http://127.0.0.1"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
 openai_api_key = "env(OPENAI_API_KEY)"
@@ -147,6 +148,7 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
+# [PRODUCTION] 프로덕션 배포 시 실제 도메인으로 변경 필요. 이 값은 로컬 개발용입니다.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["https://127.0.0.1:3000"]

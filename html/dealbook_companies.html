@@ -42,7 +42,8 @@
             display: flex; align-items: center; justify-content: space-between;
         }
         .modal-header h3 { margin: 0; font-size: 18px; color: #ffffff; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 24px; background: #ffffff; display: flex; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 24px; background: #ffffff; display: flex; flex-direction: column; }
+        #nda-modal .modal-body { display: block; }
         .modal-footer {
             padding: 16px 24px; background: #ffffff;
             border-top: 1px solid #f1f5f9;
@@ -57,11 +58,11 @@
         .sidebar-section {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 0;
             margin-bottom: 32px;
         }
         .section-title {
-            margin: 0 0 12px 0 !important;
+            margin: 0 0 8px 0 !important;
             font-weight: 600;
             font-size: 13px;
             color: var(--text-secondary);

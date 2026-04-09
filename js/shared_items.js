@@ -315,12 +315,13 @@ function renderList() {
 function buildRow(item) {
     const cfg    = getTypeConfig(item.item_type);
     const sender = userMap[item.sender_id] || { name: '정보 없음', avatar: null, affiliation: '-' };
+    const isDeleted = !item.itemFound;
 
-    const typeText = `<span class="type-tag-td" style="background:${cfg.bg}; color:${cfg.color}; border:1px solid ${cfg.color}33;">${cfg.label}</span>`;
+    const typeText = `<span class="type-tag-td" style="background:${cfg.bg}; color:${cfg.color}; border:1px solid ${cfg.color + '33'};">${cfg.label}</span>`;
 
     const industryHtml = item.industry
         ? `<span class="industry-tag-td"
-                 style="background:${cfg.bg}; color:${cfg.color}; border:1px solid ${cfg.color}33;">
+                 style="background:${cfg.bg}; color:${cfg.color}; border:1px solid ${cfg.color + '33'};">
                ${escapeHtml(item.industry)}
            </span>`
         : `<span style="color:#cbd5e1; font-size:12px;">-</span>`;
@@ -339,22 +340,22 @@ function buildRow(item) {
            </span>`;
 
     const nameDisplay = item.isNdaSigned
-        ? `<span style="font-size:14px; font-weight:700; color:#1e293b; min-width:0;
+        ? `<span class="item-name-span" style="font-size:14px; font-weight:700; color:#1e293b; min-width:0;
                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
                  title="${escapeHtml(item.itemName)}">${escapeHtml(item.itemName)}</span>`
-        : `<span style="display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
-                        color:${cfg.color}; background:${cfg.bg}; border:1px solid ${cfg.color}33;
+        : `<span class="nda-required-tag" style="display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
+                        color:${cfg.color}; background:${cfg.bg}; border:1px solid ${cfg.color + '33'};
                         border-radius:8px; padding:3px 10px; white-space:nowrap;">
                <span class="material-symbols-outlined" style="font-size:14px;">lock</span>NDA 필요
            </span>`;
 
     const row = $(`
-        <tr class="table-row-clickable" style="cursor:pointer;">
+        <tr class="${isDeleted ? 'row-deleted' : 'table-row-clickable'}">
             <td>
                 <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                    <div style="width:36px; height:36px; background:${cfg.color}; border-radius:8px;
+                    <div class="item-icon-box" style="width:36px; height:36px; background:${cfg.color}; border-radius:8px;
                                 display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="color:#fff; font-size:20px;">${item.isNdaSigned ? getIndustryIcon(item.industry, item.item_type) : 'lock'}</span>
+                        <span class="material-symbols-outlined" style="color:#fff; font-size:20px;">${item.isNdaSigned ? (isDeleted ? 'block' : getIndustryIcon(item.industry, item.item_type)) : 'lock'}</span>
                     </div>
                     ${nameDisplay}
                 </div>
@@ -362,12 +363,12 @@ function buildRow(item) {
             <td>${industryHtml}</td>
             <td class="text-center">${typeText}</td>
             <td class="text-center">
-                <span style="font-size:13px; font-weight:700; color:#475569;">
+                <span class="visibility-text" style="font-size:13px; font-weight:700; color:#475569;">
                     ${item.displayVisibility}
                 </span>
             </td>
             <td>
-                <div style="font-size:13px; color:#334155; display:-webkit-box;
+                <div class="memo-text" style="font-size:13px; color:#334155; display:-webkit-box;
                             -webkit-line-clamp:2; -webkit-box-orient:vertical;
                             overflow:hidden; line-height:1.5;">
                     ${memoHtml}
@@ -390,7 +391,7 @@ function buildRow(item) {
             <td class="text-center" onclick="event.stopPropagation();">
                 <button class="delete-share-btn" data-id="${escapeHtml(String(item.id))}"
                         style="background:none; border:none; color:#cbd5e1; cursor:pointer;
-                               padding:4px; transition:color 0.2s;">
+                                padding:4px; transition:color 0.2s;">
                     <span class="material-symbols-outlined" style="font-size:18px;">close</span>
                 </button>
             </td>
@@ -402,7 +403,9 @@ function buildRow(item) {
         handleDeleteShare($(this).data('id'));
     });
 
-    row.on('click', () => showItemSummaryModal(item));
+    if (!isDeleted) {
+        row.on('click', () => showItemSummaryModal(item));
+    }
 
     return row;
 }

@@ -152,7 +152,7 @@ function renderBuyers() {
                 <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
                     <div class="d-flex align-items-center gap-3" style="min-width: 0;">
                         <div style="width: 36px; height: 36px; background: ${isDraft ? '#e2e8f0' : '#0d9488'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <span class="material-symbols-outlined" style="color: ${isDraft ? '#94a3b8' : '#ffffff'}; font-size: 20px;">${getIndustryIcon(buyer.industry)}</span>
+                            <span class="material-symbols-outlined" style="color: ${isDraft ? '#94a3b8' : '#ffffff'}; font-size: 20px;">${getIndustryIcon(buyer.interest_industry)}</span>
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <span class="fw-bold text-truncate" style="display:block;font-size:14px;color:${isDraft ? '#94a3b8' : 'inherit'};">${escapeHtml(buyer.company_name || "이름 없음")}</span>
@@ -269,11 +269,19 @@ function updateFilterOptions() {
 function applyFilters() {
     const keyword = ($('#search-input').val() || "").toLowerCase();
     const industries = $('.industry-checkbox:checked').map(function() { return this.value; }).get();
+    const statuses = $('.status-checkbox:checked').map(function() { return this.value; }).get();
+    const selectedVis = $('.visibility-checkbox:checked').map(function() { return this.value; }).get();
 
     filteredBuyers = allBuyers.filter(b => {
         const matchesKeyword = !keyword || (b.company_name && b.company_name.toLowerCase().includes(keyword)) || (b.summary && b.summary.toLowerCase().includes(keyword));
-        const matchesIndustry = industries.length === 0 || industries.includes(b.industry);
-        return matchesKeyword && matchesIndustry;
+        const matchesIndustry = industries.length === 0 || industries.includes(b.interest_industry);
+        const matchesStatus = statuses.length === 0 || statuses.includes(b.status);
+        const matchesVis = selectedVis.length === 0 || selectedVis.some(v => {
+            if (v === 'public') return !b.is_draft;
+            if (v === 'private') return !!b.is_draft;
+            return false;
+        });
+        return matchesKeyword && matchesIndustry && matchesStatus && matchesVis;
     });
 
     applySort($('.sort-option.active').data('sort') || 'latest');

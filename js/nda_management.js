@@ -279,7 +279,7 @@ function renderCurrentPage() {
         }
 
         const typeCfg = TYPE_CONFIG[log.item_type] || TYPE_CONFIG.seller;
-        const isRestricted = (log.itemStatus === '진행중' || log.itemStatus === '완료');
+        const isRestricted = (log.itemStatus === '진행중' || log.itemStatus === '완료' || log.itemName === '삭제된 항목');
         
         const shortIndustry = getIndustryShortName(log.itemIndustry);
         const industryHtml = log.itemIndustry

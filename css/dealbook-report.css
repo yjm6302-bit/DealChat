@@ -93,6 +93,8 @@ body.report-mode select:disabled {
     cursor: default !important;
     font-size: 14px !important;
     font-weight: 500 !important;
+    padding-left: 0 !important;
+    height: auto !important;
     -webkit-text-fill-color: var(--report-text) !important;
 }
 
@@ -112,6 +114,7 @@ body.report-mode [contenteditable="false"]:empty::before {
 body.report-mode .db-field-wrapper {
     border: none !important;
     background: transparent !important;
+    padding-left: 0 !important;
 }
 
 /* ── 3. 텍스트 컨텐츠 (textarea → div 변환) ─────── */
@@ -243,7 +246,8 @@ body.report-mode .btn-remove-year,
 body.report-mode .btn-remove-item,
 body.report-mode .drag-handle,
 body.report-mode .blind-check,
-body.report-mode label:has(.blind-check) {
+body.report-mode label:has(.blind-check),
+body.report-mode label:has(#negotiable-check) {
     display: none !important;
 }
 

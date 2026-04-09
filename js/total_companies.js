@@ -578,7 +578,22 @@ function parseCompanyData(company) {
     } catch (e) { console.error('Error parsing company summary in Total Companies:', e); }
 
     // [New Schema Support] DB에서 직접 데이터(JSONB 배열)가 있으면 우선
-    if (Array.isArray(company.financial_info) && company.financial_info.length > 0) parsed.financialDataArr = company.financial_info;
+    // [New Schema Support] DB에서 직접 데이터가 있으면 우선
+    if (company.financial_info) {
+        if (Array.isArray(company.financial_info)) {
+            if (company.financial_info.length > 0) parsed.financialDataArr = company.financial_info;
+        } else if (company.financial_info.years && company.financial_info.items) {
+            // 새 형식(객체) -> 배열 형식 변환
+            const arr = company.financial_info.years.map(year => {
+                const row = { year };
+                company.financial_info.items.forEach(item => {
+                    row[item.key] = item.values[year] || '';
+                });
+                return row;
+            });
+            parsed.financialDataArr = arr;
+        }
+    }
     if (Array.isArray(company.investment_info) && company.investment_info.length > 0) parsed.investmentDataArr = company.investment_info;
     if (company.mgmt_status) parsed.mgmt_status = company.mgmt_status;
     if (company.manager_memo) parsed.managerMemo = company.manager_memo;
@@ -618,7 +633,7 @@ function getLatestMetrics(data) {
             const revInWon = extractNumber(sorted[0].value);
             // 억 단위로 변환
             const revInBillion = Math.trunc(revInWon / 10000000) / 10;
-            res.revenue.value = revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+            res.revenue.value = revInBillion > 0 ? revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
             res.revenue.year = sorted[0].year > 0 ? sorted[0].year.toString() : '';
         }
     } else if (data.financialStatusDesc) {
@@ -634,7 +649,7 @@ function getLatestMetrics(data) {
             if (revValue || revValue === 0) {
                 const revInWon = extractNumber(revValue);
                 const revInBillion = Math.trunc(revInWon / 10000000) / 10;
-                res.revenue.value = revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+                res.revenue.value = revInBillion > 0 ? revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
                 res.revenue.year = top.year > 0 ? top.year.toString() : '';
             }
         }
@@ -660,7 +675,7 @@ function getLatestMetrics(data) {
         if (hasData) {
             // 천만 단위 이하 절삭
             const totalInBillion = Math.floor(totalVal / 10000000) / 10;
-            res.investment.value = totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+             res.investment.value = totalInBillion > 0 ? totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
             res.investment.year = sortedInv.length > 0 && sortedInv[0].stage ? sortedInv[0].stage : "누적";
         }
     } else if (data.investmentStatusDesc) {
@@ -683,7 +698,7 @@ function getLatestMetrics(data) {
         if (hasData) {
             // 천만 단위 이하 절삭
             const totalInBillion = Math.floor(totalVal / 10000000) / 10;
-            res.investment.value = totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+            res.investment.value = totalInBillion > 0 ? totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
             res.investment.year = parsedLines.length > 0 && parsedLines[0].stage ? parsedLines[0].stage : "누적";
         }
     }

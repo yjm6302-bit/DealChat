@@ -163,16 +163,31 @@ function getLatestMetrics(data) {
     const res = { revenue: { value: "-", year: "" }, investment: { value: "-", year: "" } };
     
     // 매출액: 가장 최근 연도의 매출액
-    if (data.financial_info && Array.isArray(data.financial_info) && data.financial_info.length > 0) {
-        const sorted = data.financial_info
-            .map(item => ({ year: parseInt(item.year) || 0, value: item.revenue || 0 }))
-            .sort((a, b) => b.year - a.year);
+    let finArr = [];
+    if (data.financial_info) {
+        if (Array.isArray(data.financial_info)) {
+            // 구 형식 (배열)
+            finArr = data.financial_info.map(item => ({ year: parseInt(item.year) || 0, value: item.revenue || 0 }));
+        } else if (data.financial_info.years && data.financial_info.items) {
+            // 새 형식 (객체)
+            const revItem = data.financial_info.items.find(i => i.key === 'revenue');
+            if (revItem) {
+                finArr = data.financial_info.years.map(y => ({
+                    year: parseInt(y) || 0,
+                    value: revItem.values[y] || 0
+                }));
+            }
+        }
+    }
+
+    if (finArr.length > 0) {
+        const sorted = finArr.sort((a, b) => b.year - a.year);
         
         if (sorted.length > 0 && (sorted[0].value || sorted[0].value === 0)) {
             const revInWon = extractNumber(sorted[0].value);
             // 억 단위로 변환 (천만 단위 이하 절삭 후 소수점 첫째 자리까지)
             const revInBillion = Math.trunc(revInWon / 10000000) / 10;
-            res.revenue.value = revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+            res.revenue.value = revInBillion > 0 ? revInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
             res.revenue.year = sorted[0].year > 0 ? sorted[0].year.toString() : '';
         }
     }
@@ -196,7 +211,7 @@ function getLatestMetrics(data) {
         if (hasData) {
             // 천만 단위 이하 절삭
             const totalInBillion = Math.floor(totalVal / 10000000) / 10;
-            res.investment.value = totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+            res.investment.value = totalInBillion > 0 ? totalInBillion.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-';
             res.investment.year = sortedInv.length > 0 && sortedInv[0].stage ? sortedInv[0].stage : "누적";
         }
     }
@@ -246,7 +261,7 @@ function renderCompanies() {
                 </div>
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc;">
-                <div class="summary-td" style="color: #1A73E8; font-weight: 500;">${escapeHtml(c.private_memo || "-")}</div>
+                <div class="summary-td" style="color: ${c.is_draft ? '#94a3b8' : '#1A73E8'}; font-weight: 500;">${escapeHtml(c.private_memo || "-")}</div>
                 ${c.mgmt_status ? `<div><span class="mgmt-status-badge border" style="background: ${c.is_draft ? '#f8fafc' : '#f0f7ff'}; color: ${c.is_draft ? '#94a3b8' : '#1A73E8'}; border-color: ${c.is_draft ? '#e2e8f0' : '#dbeafe'} !important;">#${escapeHtml(c.mgmt_status.replace(/\s+/g, ''))}</span></div>` : ''}
             </td>
             <td style="padding: 20px 24px !important; border-right: 1px solid #f8fafc; vertical-align: middle !important;" data-user-id="${c.user_id}" class="author-cell-clickable" onclick="event.stopPropagation(); if (window.showProfileModal) { window.showProfileModal('${c.user_id}'); }">

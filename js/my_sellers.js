@@ -272,11 +272,21 @@ function localRenderSelectedTags() {
 function applyFilters() {
     const keyword = ($('#search-input').val() || "").toLowerCase();
     const industries = $('.industry-checkbox:checked').map(function() { return this.value; }).get();
+    const methods = $('.method-checkbox:checked').map(function() { return this.value; }).get();
+    const selectedVis = $('.visibility-checkbox:checked').map(function() { return this.value; }).get();
+    const negotiableOnly = $('.negotiable-checkbox').is(':checked');
 
     filteredSellers = allSellers.filter(s => {
         const matchesKeyword = !keyword || (s.company_name && s.company_name.toLowerCase().includes(keyword)) || (s.summary && s.summary.toLowerCase().includes(keyword));
         const matchesIndustry = industries.length === 0 || industries.includes(s.industry);
-        return matchesKeyword && matchesIndustry;
+        const matchesMethod = methods.length === 0 || methods.includes(s.status);
+        const matchesVis = selectedVis.length === 0 || selectedVis.some(v => {
+            if (v === 'public') return !s.is_draft;
+            if (v === 'private') return !!s.is_draft;
+            return false;
+        });
+        const matchesNegotiable = !negotiableOnly || (s.matching_price && String(s.matching_price).includes('협의'));
+        return matchesKeyword && matchesIndustry && matchesMethod && matchesVis && matchesNegotiable;
     });
 
     applySort($('.sort-option.active').data('sort') || 'latest');

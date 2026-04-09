@@ -95,7 +95,18 @@ export async function copySharingTemplate(sharerInfo, shareUrl, shareKey) {
 `;
 
     try {
-        await navigator.clipboard.writeText(template);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(template);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = template;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
         return true;
     } catch (err) {
         console.error('Failed to copy template:', err);
@@ -220,7 +231,8 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
 
             // Construct Link
             const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-            const shareUrl = baseUrl + `/dealbook_${itemType}s.html?id=${id}&from=shared`;
+            const detailPageMap = { seller: 'dealbook_sellers.html', buyer: 'dealbook_buyers.html', company: 'dealbook_companies.html' };
+            const shareUrl = baseUrl + `/${detailPageMap[itemType] || 'index.html'}?id=${id}&from=shared`;
 
             // Prepare sharer info
             const sharerInfo = {
@@ -261,7 +273,18 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
             btn.prop('disabled', true).text('키 생성 완료').css('background', '#94a3b8');
 
             // Auto-copy first time
-            await navigator.clipboard.writeText(template);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(template);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = template;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
             alert('키가 생성되었으며 안내 문구가 클립보드에 복사되었습니다.');
 
         } catch (error) {
@@ -300,7 +323,18 @@ export function initExternalSharing(itemType, themeColor = '#0d9488') {
         if ($(this).prop('disabled')) return;
         const template = $('#ext-share-guidance-box').text();
         try {
-            await navigator.clipboard.writeText(template);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(template);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = template;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
             alert('안내 문구가 클립보드에 복사되었습니다.');
         } catch (err) {
             alert('복사에 실패했습니다.');

@@ -22,6 +22,14 @@
 </head>
 
 <body class="auth-page">
+    <script>
+        try {
+            var _u = JSON.parse(localStorage.getItem('dealchat_users'));
+            if (_u && _u.isLoggedIn === true) {
+                window.location.href = _u.role === 'buyer' ? './total_sellers.html' : './index.html';
+            }
+        } catch (e) { }
+    </script>
     <!-- Header Removed -->
 
     <main class="main-content">

@@ -2432,6 +2432,7 @@ body.theme-mode-buyers {
 
 .industry-checkbox:checked + .industry-checkbox-label,
 .mgmt-checkbox:checked + .industry-checkbox-label,
+.status-checkbox:checked + .industry-checkbox-label,
 .visibility-checkbox:checked + .industry-checkbox-label,
 .stage-checkbox:checked + .industry-checkbox-label,
 .method-checkbox:checked + .industry-checkbox-label,
@@ -3709,3 +3710,19 @@ body.nda-active .app-container {
 
 
 
+
+/* 삭제된 항목 행 스타일 (shared_items.js 관련 리팩토링) */
+.row-deleted { background-color: #fbfcfd !important; cursor: default !important; }
+.row-deleted .type-tag-td,
+.row-deleted .industry-tag-td { background: #f1f5f9 !important; color: #94a3b8 !important; border-color: #e2e8f0 !important; }
+.row-deleted .author-td { opacity: 0.6; }
+.row-deleted .author-td img { filter: grayscale(1); }
+
+/* 시각적 동일성 확보를 위한 추가 규칙 */
+.row-deleted .item-name-span { color: #94a3b8 !important; }
+.row-deleted .nda-required-tag { background: #f1f5f9 !important; color: #94a3b8 !important; border-color: #e2e8f0 !important; }
+.row-deleted .item-icon-box { background: #cbd5e1 !important; }
+.row-deleted .visibility-text { color: #cbd5e1 !important; }
+.row-deleted .memo-text { color: #94a3b8 !important; }
+.row-deleted .author-name-td { color: #94a3b8 !important; }
+.row-deleted .author-affiliation-td { color: #cbd5e1 !important; }

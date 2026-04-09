@@ -169,13 +169,15 @@
                 </div>
 
                 <!-- 비공개 메모 (작성자만 확인 가능) -->
-                <div style="margin-bottom: 24px;">
-                    <div id="private-memo-section">
-                        <p class="db-field-label">
-                            <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
-                            비공개 메모 (작성자만 확인 가능)</p>
-                        <textarea id="private-memo" class="db-field-textarea" style="min-height: 80px;" placeholder="기타 특이사항이나 내부 메모를 입력하세요..."></textarea>
-                    </div>
+                <div id="private-memo-section" class="private-memo-section" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+                    <p class="db-field-label" style="color: var(--page-theme-color); margin-bottom: 0;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                        비공개 메모 (작성자만 확인 가능)
+                    </p>
+                    <textarea id="private-memo" class="db-field-textarea"
+                        style="min-height: 100px; border-color: var(--page-theme-color); color: var(--page-theme-color);"
+                        placeholder="나만 볼 수 있는 비공개 메모를 입력하세요..."></textarea>
+                </div>
 
                     <!-- 작성자/업데이트 정보 (리포트 모드에서만 표시) -->
                     <div id="memo-user-info-section" style="display: none; align-items: center; justify-content: space-between; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
@@ -196,7 +198,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
             </nav>
 
             <!-- 하단 고정 버튼 -->

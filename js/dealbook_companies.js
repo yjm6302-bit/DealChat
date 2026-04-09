@@ -289,11 +289,15 @@ $(document).ready(function () {
             if (!isMember) {
                 const isSigned = await checkNdaStatus(_supabase, companyId, user_id, 'company');
                 if (!isSigned) {
+                    $('body').addClass('nda-active');
                     initNdaGate(_supabase, companyId, 'company', userData, {
                         fromSource,
                         returnUrl: './shared_items.html',
                         onSuccess: () => location.reload()
                     });
+                    document.getElementById('nda-modal').addEventListener('hidden.bs.modal', () => {
+                        $('body').removeClass('nda-active');
+                    }, { once: true });
                     return;
                 }
             }

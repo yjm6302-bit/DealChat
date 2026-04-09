@@ -164,9 +164,13 @@ $(document).ready(function () {
             if (!isOwner && (fromSource === 'totalbuyer' || fromSource === 'total_buyers' || fromSource === 'shared')) {
                 isSigned = await sharingUtils.checkNdaStatus(_supabase, id, currentuser_id, 'buyer');
                 if (!isSigned) {
+                    $('body').addClass('nda-active');
                     sharingUtils.initNdaGate(_supabase, id, 'buyer', userData, {
                         fromSource, returnUrl: './total_buyers.html', onSuccess: () => location.reload()
                     });
+                    document.getElementById('nda-modal').addEventListener('hidden.bs.modal', () => {
+                        $('body').removeClass('nda-active');
+                    }, { once: true });
                     return;
                 }
             }
